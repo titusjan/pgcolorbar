@@ -5,6 +5,8 @@ import sys
 import numpy as np
 from pyqtgraph.Qt import QtCore, QtGui
 
+from pghistlutitem import HistogramLUTItem
+
 import pyqtgraph as pg
 
 def main():
@@ -31,7 +33,7 @@ def main():
     imagePlotItem.setRange(xRange=[0, nCols], yRange=[0, nRows])
     
     
-    histLutItem = pg.HistogramLUTItem() # what about GradientLegend?
+    histLutItem = HistogramLUTItem() # what about GradientLegend?
     histLutItem.setImageItem(imageItem)
     histLutItem.vb.setMenuEnabled(False)
     histLutItem.setHistogramRange(90, 110) # Disables autoscaling
