@@ -4,9 +4,10 @@
     the image contains NaNs. Later the mouse and scrolling behaviour may be altered.
 """
 
+import pyqtgraph as pg
 
 #from pyqtgraph.Qt import QtWidgets, QtCore
-from pyqtgraph.Qt import QtWidgets
+from pyqtgraph.Qt import QtCore, QtGui, QtWidgets
 
 from pyqtgraph.graphicsItems.GraphicsWidget import GraphicsWidget
 from pyqtgraph.graphicsItems.ViewBox import *
@@ -21,6 +22,62 @@ from pyqtgraph import debug as debug
 import weakref
 
 __all__ = ['HistogramLUTItem']
+
+
+class ColorLegendItem(GraphicsWidget):
+    """
+
+    """
+    def __init__(self, image=None, fillHistogram=True):
+        GraphicsWidget.__init__(self)
+
+
+        self.layout = QtWidgets.QGraphicsGridLayout()
+        self.setLayout(self.layout)
+        self.layout.setContentsMargins(1, 1, 1, 1)
+        self.layout.setSpacing(0)
+
+        #self.viewBox = ViewBox(enableMenu=False, border=pg.getConfigOption('foreground'))
+        self.viewBox = ViewBox(enableMenu=False)
+        # self.viewBox.setBackgroundColor("666666")
+        self.axis = AxisItem('left', linkView=self.viewBox, maxTickLength=-10, parent=self)
+
+
+        self.rectItem = QtWidgets.QGraphicsRectItem()
+        self.rectItem.setBrush(fn.mkBrush("FF0000"))
+        self.rectItem.setPen(fn.mkPen(color="FFFF00", width=1, cosmetic=True))
+        self.rectItem.setParentItem(self.viewBox.background)
+        self.rectItem.setRect(0, 0, 40, 10)
+        #self.viewBox.addItem(rectItem)
+
+        lut = np.array([(237,248,251), (178,226,226), (102,194,164), (35,139,69)])
+        barWidth = 10
+        lutImg = np.ones(shape=(len(lut), barWidth, 3), dtype=lut.dtype)
+        lutImg[...] = lut[:, np.newaxis, :]
+
+        colorScaleImageItem = pg.ImageItem()
+        colorScaleImageItem.setImage(lutImg)
+        #self.colorScaleViewBox = ViewBox(enableMenu=False)
+        self.colorScaleViewBox = ViewBox(enableMenu=False, border=pg.getConfigOption('foreground'))
+        self.colorScaleViewBox.addItem(colorScaleImageItem)
+        self.colorScaleViewBox.setMinimumWidth(10)
+        self.colorScaleViewBox.setMaximumWidth(25)
+
+        self.colorScaleViewBox.setMouseEnabled(x=False, y=False)
+
+        self.layout.addItem(self.axis, 0, 0)
+        self.layout.addItem(self.colorScaleViewBox, 0, 1)
+        self.layout.addItem(self.viewBox, 0, 2)
+
+        self.colorScaleViewBox.setRange(xRange=[0, barWidth], yRange=[0, len(lut)], padding=0.0)
+        print("viewRange: {}".format(self.colorScaleViewBox.viewRange()))
+
+        plotDataItem = PlotDataItem()
+        plotDataItem.setData([5, 7, 12])
+        self.viewBox.addItem(plotDataItem)
+
+
+
 
 
 class HistogramLUTItem(GraphicsWidget):
