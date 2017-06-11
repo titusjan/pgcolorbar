@@ -29,7 +29,7 @@ def main():
 
     ## Create random 3D data set with noisy signals
     img = pg.gaussianFilter(np.random.normal(size=(300, 200)), (5, 5)) * 20
-    print(img)
+
     nRows, nCols = img.shape
     imageItem.setImage(img)
     plotItem.setRange(xRange=[0, nCols], yRange=[0, nRows])

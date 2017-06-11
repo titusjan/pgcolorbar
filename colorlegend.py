@@ -23,53 +23,51 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.lut = lut
         self._imageItem = imageItem
         self.barWidth = barWidth
+        self.histogramFilled = True
 
+        # Histogram
+        self.histViewBox = pg.ViewBox(enableMenu=False)
+        self.histViewBox.setMouseEnabled(x=False, y=True)
+        self.histPlotDataItem = pg.PlotDataItem()
+        self.histPlotDataItem.rotate(-90)
+        self.histViewBox.addItem(self.histPlotDataItem)
+        self.fillHistogram(self.histogramFilled)
 
+        # Axis
         self.layout = QtWidgets.QGraphicsGridLayout()
         self.setLayout(self.layout)
         self.layout.setContentsMargins(1, 1, 1, 1)
         self.layout.setSpacing(0)
 
-        #self.histViewBox = ViewBox(enableMenu=False, border=pg.getConfigOption('foreground'))
-        self.histViewBox = pg.ViewBox(enableMenu=False) # TODO
-        # self.histViewBox.setBackgroundColor("666666")
-        self.axisItem = pg.AxisItem('left', linkView=self.histViewBox, maxTickLength=-10, parent=self)
+        self.axisItem = pg.AxisItem('left', linkView=self.histViewBox,
+                                    maxTickLength=-10, parent=self)
 
-        # Test rectangle.
-        self.rectItem = QtWidgets.QGraphicsRectItem()
-        self.rectItem.setBrush(pg.fn.mkBrush("FF0000"))
-        self.rectItem.setPen(pg.fn.mkPen(color="FFFF00", width=1, cosmetic=True))
-        self.rectItem.setParentItem(self.histViewBox.background)
-        self.rectItem.setRect(0, 0, 40, 10)
-        self.histViewBox.addItem(self.rectItem)
-
+        # Image
         lutImg = np.ones(shape=(len(lut), self.barWidth, 3), dtype=lut.dtype)
         lutImg[...] = lut[:, np.newaxis, :]
 
         colorScaleImageItem = pg.ImageItem()
         colorScaleImageItem.setImage(lutImg)
-        #self.colorScaleViewBox = ViewBox(enableMenu=False)
-        self.colorScaleViewBox = pg.ViewBox(enableMenu=False, border=pg.getConfigOption('foreground'))
+        self.colorScaleViewBox = pg.ViewBox(enableMenu=False,
+                                            border=pg.getConfigOption('foreground'))
         self.colorScaleViewBox.addItem(colorScaleImageItem)
         self.colorScaleViewBox.setMinimumWidth(10)
         self.colorScaleViewBox.setMaximumWidth(25)
 
         self.colorScaleViewBox.setMouseEnabled(x=False, y=False)
+        self.colorScaleViewBox.setRange(xRange=[0, self.barWidth],
+                                        yRange=[0, len(lut)],
+                                        padding=0.0)
 
         self.layout.addItem(self.axisItem, 0, 0)
         self.layout.addItem(self.colorScaleViewBox, 0, 1)
         self.layout.addItem(self.histViewBox, 0, 2)
 
-        self.colorScaleViewBox.setRange(xRange=[0, self.barWidth], yRange=[0, len(lut)], padding=0.0)
-        print("viewRange: {}".format(self.colorScaleViewBox.viewRange()))
-
-        plotDataItem = pg.PlotDataItem()
-        plotDataItem.setData([5, 7, 12])
-        self.histViewBox.addItem(plotDataItem)
-
-
         self.histViewBox.sigYRangeChanged.connect(
             lambda _viewBox, range: self.setRange(range[0], range[1]))
+
+
+        self.imageChanged(autoLevel=True)
 
 
     @property
@@ -95,3 +93,29 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.sigLevelsChanged.emit(self)
         self.update()
 
+
+    def fillHistogram(self, fill=True, level=0.0, color=(100, 100, 200)):
+        if fill:
+            self.histPlotDataItem.setFillLevel(level)
+            self.histPlotDataItem.setFillBrush(color)
+        else:
+            self.histPlotDataItem.setFillLevel(None)
+
+
+    def imageChanged(self, autoLevel=False):
+
+        img = self.imageItem.image
+        if img is None:
+            histRange = None
+        else:
+            histRange = (np.nanmin(img), np.nanmax(img))
+
+        h = self.imageItem.getHistogram(range=histRange)
+        if h[0] is None:
+            return
+        self.histPlotDataItem.setData(*h)
+
+        # if autoLevel:
+        #     mn = h[0][0]
+        #     mx = h[0][-1]
+        #     self.region.setRegion([mn, mx])
