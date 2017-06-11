@@ -28,7 +28,8 @@ def main():
     plotItem.addItem(imageItem)
 
     ## Create random 3D data set with noisy signals
-    img = pg.gaussianFilter(np.random.normal(size=(300, 200)), (5, 5)) * 20 + 100
+    img = pg.gaussianFilter(np.random.normal(size=(300, 200)), (5, 5)) * 20
+    print(img)
     nRows, nCols = img.shape
     imageItem.setImage(img)
     plotItem.setRange(xRange=[0, nCols], yRange=[0, nRows])
@@ -47,10 +48,10 @@ def main():
 
     imageItem.setLookupTable(lut1)
 
+
+    colorLegendItem = ColorLegendItem(lut=lut1, imageItem=imageItem)
+
     graphicsLayoutWidget = pg.GraphicsLayoutWidget()
-
-    colorLegendItem = ColorLegendItem()
-
     graphicsLayoutWidget.addItem(colorLegendItem, 0, 0)
     graphicsLayoutWidget.addItem(plotItem, 0, 1)
     #graphicsLayoutWidget.addItem(histLutItem, 0, 2)

@@ -8,39 +8,42 @@ import numpy as np
 import pyqtgraph as pg
 
 
-from pyqtgraph.Qt import  QtWidgets
+from pyqtgraph.Qt import QtWidgets
 
 
 
 class ColorLegendItem(pg.GraphicsWidget):
     """ Color legend for an image plot.
     """
-    def __init__(self):
+    def __init__(self, lut, imageItem=None, barWidth=10):
         """ Constructor.
         """
         pg.GraphicsWidget.__init__(self)
+
+        self.lut = lut
+        self._imageItem = imageItem
+        self.barWidth = barWidth
+
 
         self.layout = QtWidgets.QGraphicsGridLayout()
         self.setLayout(self.layout)
         self.layout.setContentsMargins(1, 1, 1, 1)
         self.layout.setSpacing(0)
 
-        #self.viewBox = ViewBox(enableMenu=False, border=pg.getConfigOption('foreground'))
-        self.viewBox = pg.ViewBox(enableMenu=False)
-        # self.viewBox.setBackgroundColor("666666")
-        self.axis = pg.AxisItem('left', linkView=self.viewBox, maxTickLength=-10, parent=self)
+        #self.histViewBox = ViewBox(enableMenu=False, border=pg.getConfigOption('foreground'))
+        self.histViewBox = pg.ViewBox(enableMenu=False) # TODO
+        # self.histViewBox.setBackgroundColor("666666")
+        self.axisItem = pg.AxisItem('left', linkView=self.histViewBox, maxTickLength=-10, parent=self)
 
-
+        # Test rectangle.
         self.rectItem = QtWidgets.QGraphicsRectItem()
         self.rectItem.setBrush(pg.fn.mkBrush("FF0000"))
         self.rectItem.setPen(pg.fn.mkPen(color="FFFF00", width=1, cosmetic=True))
-        self.rectItem.setParentItem(self.viewBox.background)
+        self.rectItem.setParentItem(self.histViewBox.background)
         self.rectItem.setRect(0, 0, 40, 10)
-        #self.viewBox.addItem(rectItem)
+        self.histViewBox.addItem(self.rectItem)
 
-        lut = np.array([(237,248,251), (178,226,226), (102,194,164), (35,139,69)])
-        barWidth = 10
-        lutImg = np.ones(shape=(len(lut), barWidth, 3), dtype=lut.dtype)
+        lutImg = np.ones(shape=(len(lut), self.barWidth, 3), dtype=lut.dtype)
         lutImg[...] = lut[:, np.newaxis, :]
 
         colorScaleImageItem = pg.ImageItem()
@@ -53,15 +56,42 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         self.colorScaleViewBox.setMouseEnabled(x=False, y=False)
 
-        self.layout.addItem(self.axis, 0, 0)
+        self.layout.addItem(self.axisItem, 0, 0)
         self.layout.addItem(self.colorScaleViewBox, 0, 1)
-        self.layout.addItem(self.viewBox, 0, 2)
+        self.layout.addItem(self.histViewBox, 0, 2)
 
-        self.colorScaleViewBox.setRange(xRange=[0, barWidth], yRange=[0, len(lut)], padding=0.0)
+        self.colorScaleViewBox.setRange(xRange=[0, self.barWidth], yRange=[0, len(lut)], padding=0.0)
         print("viewRange: {}".format(self.colorScaleViewBox.viewRange()))
 
         plotDataItem = pg.PlotDataItem()
         plotDataItem.setData([5, 7, 12])
-        self.viewBox.addItem(plotDataItem)
+        self.histViewBox.addItem(plotDataItem)
 
+
+        self.histViewBox.sigYRangeChanged.connect(
+            lambda _viewBox, range: self.setRange(range[0], range[1]))
+
+
+    @property
+    def imageItem(self):
+        """ Returns the ImageItem that this legend is linked to.
+        """
+        return self._imageItem
+
+
+    def setRange(self, rangeMin, rangeMax):
+        """ Sets the value range of the legend
+        """
+        if self.imageItem is not None:
+            print("setRange: {} {}".format(rangeMin, rangeMax))
+            self.imageItem.setLevels((rangeMin, rangeMax))
+
+
+    def axisChanging(self):
+        """
+        """
+        if self.imageItem() is not None:
+            self.imageItem().setLevels(self.region.getRegion())
+        self.sigLevelsChanged.emit(self)
+        self.update()
 
