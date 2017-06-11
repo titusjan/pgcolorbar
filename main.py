@@ -5,7 +5,8 @@ import sys
 import numpy as np
 from pyqtgraph.Qt import QtCore, QtGui
 
-from pghistlutitem import HistogramLUTItem, ColorLegendItem
+from pghistlutitem import HistogramLUTItem
+from colorlegend import ColorLegendItem
 
 import pyqtgraph as pg
 
@@ -38,11 +39,11 @@ def main():
     lut2 = np.array([(237,248,251), (204,236,230), (153,216,201), (102,194,164), (65,174,118), (35,139,69), (0,88,36)])
 
 
-    histLutItem = HistogramLUTItem() # what about GradientLegend?
-    histLutItem.setImageItem(imageItem)
-    histLutItem.vb.setMenuEnabled(False)
-    histLutItem.setHistogramRange(90, 110) # Disables autoscaling
-    #histLutItem.gradient.setLookupTable(lut) # doesnt' work
+    # histLutItem = HistogramLUTItem() # what about GradientLegend?
+    # histLutItem.setImageItem(imageItem)
+    # histLutItem.vb.setMenuEnabled(False)
+    # histLutItem.setHistogramRange(90, 110) # Disables autoscaling
+    # #histLutItem.gradient.setLookupTable(lut) # doesn't work
 
     imageItem.setLookupTable(lut1)
 
