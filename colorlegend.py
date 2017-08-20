@@ -27,12 +27,19 @@ class ColorLegendItem(pg.GraphicsWidget):
         # Histogram
         self.histViewBox = pg.ViewBox(enableMenu=False)
         self.histViewBox.setMouseEnabled(x=False, y=True)
+        #self.histViewBox.setFixedWidth(300)
         self.histPlotDataItem = pg.PlotDataItem()
-        self.histPlotDataItem.rotate(-90)
+        if 0:
+            self.histPlotDataItem.rotate(90)
+        else:
+            # We need to mirror the data here. Perhaps therefore not a good idea
+            self.histPlotDataItem.scale(-1, 1)
+            self.histPlotDataItem.rotate(90)
+
+
         self.histViewBox.addItem(self.histPlotDataItem)
         self.fillHistogram(self.histogramFilled)
 
-        #HISTOGRAM AND PLOT RANGE DON'T MATCH
 
         # Axis
         self.layout = QtWidgets.QGraphicsGridLayout()
@@ -65,7 +72,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.layout.addItem(self.histViewBox, 0, 2)
 
         self.histViewBox.sigYRangeChanged.connect(
-            lambda _viewBox, range: self.setRange(range[0], range[1]))
+            lambda _viewBox, range: self.setRange(range))
 
 
         self.imageChanged(autoLevel=True)
@@ -78,12 +85,12 @@ class ColorLegendItem(pg.GraphicsWidget):
         return self._imageItem
 
 
-    def setRange(self, rangeMin, rangeMax):
+    def setRange(self, range):
         """ Sets the value range of the legend
         """
         if self.imageItem is not None:
-            logger.debug("setRange: {} {}".format(rangeMin, rangeMax))
-            self.imageItem.setLevels((rangeMin, rangeMax))
+            logger.debug("setRange: {}".format(range))
+            self.imageItem.setLevels(range)
 
 
     def axisChanging(self):
@@ -105,16 +112,25 @@ class ColorLegendItem(pg.GraphicsWidget):
 
     def imageChanged(self, autoLevel=False):
 
+        logger.debug("ColorLegenItem.imageChagned(autoLevel={}) called".format(autoLevel))
+
         img = self.imageItem.image
         if img is None:
             histRange = None
         else:
             histRange = (np.nanmin(img), np.nanmax(img))
 
+        logger.debug("histRange: {}".format(histRange))
+
         h = self.imageItem.getHistogram(range=histRange)
         if h[0] is None:
             return
-        self.histPlotDataItem.setData(*h)
+        else:
+            hX, hY = h
+            #logger.debug("hist X: {} (len={})".format(hX, len(hX)))
+            #self.histPlotDataItem.setData(*h)
+            self.histPlotDataItem.setData(x=hX, y=hY)
+            logger.debug("hist X: {} (len={})".format(self.histPlotDataItem.xData, len(self.histPlotDataItem.xData)))
 
         # if autoLevel:
         #     mn = h[0][0]

@@ -30,16 +30,16 @@ class MyWindow(QtWidgets.QWidget):
         viewBox = self.plotItem.getViewBox()
         viewBox.disableAutoRange(pg.ViewBox.XYAxes)
 
-        imageItem = pg.ImageItem()
-        self.plotItem.addItem(imageItem)
+        self.imageItem = pg.ImageItem()
+        self.plotItem.addItem(self.imageItem)
 
         nRows, nCols = img.shape
-        imageItem.setImage(img)
-        imageItem.setLookupTable(lut)
+        self.imageItem.setImage(img)
+        self.imageItem.setLookupTable(lut)
 
         self.plotItem.setRange(xRange=[0, nCols], yRange=[0, nRows])
 
-        self.colorLegendItem = ColorLegendItem(lut=lut, imageItem=imageItem)
+        self.colorLegendItem = ColorLegendItem(lut=lut, imageItem=self.imageItem)
         self.colorLegendItem.setMinimumHeight(60)
 
         self.graphicsLayoutWidget = pg.GraphicsLayoutWidget()
@@ -47,6 +47,26 @@ class MyWindow(QtWidgets.QWidget):
         self.graphicsLayoutWidget.addItem(self.plotItem, 0, 1)
 
         self.mainLayout.addWidget(self.graphicsLayoutWidget)
+
+        self.resetAction = QtWidgets.QAction("reset", self)
+        self.resetAction.triggered.connect(self.resetScale)
+        self.resetAction.setShortcut("Ctrl+0")
+        self.addAction(self.resetAction) # Needed to make it work without a button present
+
+        # self.resetButton = QtWidgets.QToolButton()
+        # self.resetButton.setDefaultAction(self.resetAction)
+        # self.mainLayout.addWidget(self.resetButton)
+
+
+    def resetScale(self):
+        logger.debug("Reset scale")
+
+        img = self.imageItem.image
+        assert isinstance(img, np.ndarray)
+
+        range = (np.nanmin(img), np.nanmax(img))
+        self.colorLegendItem.setRange(range)
+
 
 
 def main():
@@ -57,7 +77,8 @@ def main():
     ## Create random 3D data set with noisy signals
     #img = pg.gaussianFilter(np.random.normal(size=(300, 200)), (5, 5)) * 20
     #img = np.random.normal(size=(300, 200)) * 100
-    img = np.random.uniform(0.0, 1.0, size=(300, 200))
+    img = np.random.uniform(0.0, 1.0, size=(300, 300))
+    img = np.square(img)
 
     #cmap = pg.ColorMap([0, 0.25, 0.75, 1], [[0, 0, 0, 255], [255, 0, 0, 255], [255, 255, 0, 255], [255, 255, 255, 255]])
     #lut0 = cmap.getLookupTable()
@@ -66,11 +87,11 @@ def main():
                      (65,174,118), (35,139,69), (0,88,36)])
 
 
-
     ## Create window with ImageView widget
-    win = MyWindow(img=img, lut=lut1)
+    win = MyWindow(img=img, lut=np.flipud(lut1))
 
-    win.resize(800,800)
+
+    win.setGeometry(400, 100, 700, 600)
     win.setWindowTitle('pyqtgraph example: ImageView')
     win.show()
 
