@@ -3,14 +3,13 @@
     Currently only a histogram range in the imageChanged method is added. This prevents errors when
     the image contains NaNs. Later the mouse and scrolling behaviour may be altered.
 """
-
+import logging
 import numpy as np
 import pyqtgraph as pg
 
-
 from pyqtgraph.Qt import QtWidgets
 
-
+logger = logging.getLogger(__name__)
 
 class ColorLegendItem(pg.GraphicsWidget):
     """ Color legend for an image plot.
@@ -32,6 +31,8 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.histPlotDataItem.rotate(-90)
         self.histViewBox.addItem(self.histPlotDataItem)
         self.fillHistogram(self.histogramFilled)
+
+        #HISTOGRAM AND PLOT RANGE DON'T MATCH
 
         # Axis
         self.layout = QtWidgets.QGraphicsGridLayout()
@@ -81,7 +82,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         """ Sets the value range of the legend
         """
         if self.imageItem is not None:
-            print("setRange: {} {}".format(rangeMin, rangeMax))
+            logger.debug("setRange: {} {}".format(rangeMin, rangeMax))
             self.imageItem.setLevels((rangeMin, rangeMax))
 
 
