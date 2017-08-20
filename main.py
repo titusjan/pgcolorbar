@@ -93,6 +93,21 @@ def main():
                      (65,174,118), (35,139,69), (0,88,36)])
 
 
+    if 0:
+        lut1 = np.array([(0, 0, 0), (1, 1, 1), (2, 2, 2), (3, 3, 3)])
+        data = np.array([[0.0, 0.25], [0.9999, 1.0]])
+
+        res = pg.makeARGB(data, lut1, levels=(0, 1), scale=3)
+        logger.debug("scale=3, res: \n{}".format(res))
+
+        res = pg.makeARGB(data, lut1, levels=(0, 1), scale=4)
+        logger.debug("scale=4, res: \n{}".format(res))
+
+        return
+
+
+
+
     ## Create window with ImageView widget
     win = MyWindow(img=img, lut=np.flipud(lut1))
 

@@ -48,7 +48,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.axisItem = pg.AxisItem('right', linkView=self.histViewBox,
                                     maxTickLength=-10, parent=self)
 
-        # Image
+        # Image of the color scale.
         lutImg = np.ones(shape=(len(lut), self.barWidth, 3), dtype=lut.dtype)
         lutImg[...] = lut[:, np.newaxis, :]
 
@@ -69,7 +69,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.layout.addItem(self.colorScaleViewBox, 0, 1)
         self.layout.addItem(self.axisItem, 0, 2)
 
-        # TODO: this will also trigger an update when the axis is resized.
+        # TODO: this will also trigger an update when the axis is resized. (Or does it?)
         # Perhaps we should test if the range has changed substantially before updating image levels.
         self.histViewBox.sigYRangeChanged.connect(
             lambda _viewBox, range: self._updateImageLevels())
@@ -142,3 +142,5 @@ class ColorLegendItem(pg.GraphicsWidget):
         #     mn = h[0][0]
         #     mx = h[0][-1]
         #     self.region.setRegion([mn, mx])
+
+
