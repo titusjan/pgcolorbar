@@ -92,8 +92,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         """
         logger.debug("ColorLegendItem.setLevels: {}".format(levels), stack_info=False)
         lvlMin, lvlMax = levels
-        self.histViewBox.setYRange(lvlMin, lvlMax) # this works but leaves a margin
-
+        self.histViewBox.setYRange(lvlMin, lvlMax, padding=0)
 
 
     @QtCore.pyqtSlot()

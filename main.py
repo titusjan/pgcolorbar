@@ -68,7 +68,10 @@ class MyWindow(QtWidgets.QWidget):
         img = self.imageItem.image
         assert isinstance(img, np.ndarray)
 
-        levels = (np.nanmin(img), np.nanmax(img))
+        if 0:
+            levels = (np.nanmin(img), np.nanmax(img))
+        else:
+            levels = (0.0, 1.0)
         self.colorLegendItem.setLevels(levels)
 
 
