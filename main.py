@@ -39,7 +39,14 @@ class MyWindow(QtWidgets.QWidget):
 
         nRows, nCols = img.shape
         self.imageItem.setImage(img)
-        self.imageItem.setLookupTable(lut)
+
+        # Duplicate last item because the pyqtgraph.makeARGB function has a wrong default scale. It
+        # should be equal to the length of the LUT, but it's set to len(lut)-1. We therefore add a
+        # fake LUT entry.
+        extendedLut = np.append(lut, [lut[-1, :]], axis=0)
+        self.imageItem.setLookupTable(extendedLut)
+
+
 
         self.plotItem.setRange(xRange=[0, nCols], yRange=[0, nRows])
 

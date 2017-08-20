@@ -23,7 +23,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         """
         pg.GraphicsWidget.__init__(self)
 
-        self.lut = lut
+        self._lut = lut
         self._imageItem = imageItem
         self.barWidth = barWidth
         self.histogramFilled = True
