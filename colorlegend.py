@@ -55,7 +55,8 @@ class ColorLegendItem(pg.GraphicsWidget):
         colorScaleImageItem = pg.ImageItem()
         colorScaleImageItem.setImage(lutImg)
         self.colorScaleViewBox = pg.ViewBox(enableMenu=False,
-                                            border=pg.getConfigOption('foreground'))
+                                            border=pg.mkPen(pg.getConfigOption('foreground'),
+                                                            width=1.5)) 
         self.colorScaleViewBox.addItem(colorScaleImageItem)
         self.colorScaleViewBox.setMinimumWidth(10)
         self.colorScaleViewBox.setMaximumWidth(25)
