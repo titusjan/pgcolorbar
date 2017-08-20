@@ -10,6 +10,10 @@ from pyqtgraph.Qt import QtCore, QtGui, QtWidgets
 from pghistlutitem import HistogramLUTItem
 from colorlegend import ColorLegendItem
 
+if 0:
+    import pyqtgraph as pg
+    temp = pg.HistogramLUTItem
+
 import pyqtgraph as pg
 
 LOG_FMT = '%(asctime)s %(filename)25s:%(lineno)-4d : %(levelname)-7s: pid=%(process)d: %(message)s'
@@ -43,8 +47,8 @@ class MyWindow(QtWidgets.QWidget):
         self.colorLegendItem.setMinimumHeight(60)
 
         self.graphicsLayoutWidget = pg.GraphicsLayoutWidget()
-        self.graphicsLayoutWidget.addItem(self.colorLegendItem, 0, 0)
-        self.graphicsLayoutWidget.addItem(self.plotItem, 0, 1)
+        self.graphicsLayoutWidget.addItem(self.plotItem, 0, 0)
+        self.graphicsLayoutWidget.addItem(self.colorLegendItem, 0, 1)
 
         self.mainLayout.addWidget(self.graphicsLayoutWidget)
 
@@ -64,8 +68,8 @@ class MyWindow(QtWidgets.QWidget):
         img = self.imageItem.image
         assert isinstance(img, np.ndarray)
 
-        range = (np.nanmin(img), np.nanmax(img))
-        self.colorLegendItem.setRange(range)
+        levels = (np.nanmin(img), np.nanmax(img))
+        self.colorLegendItem.setLevels(levels)
 
 
 
@@ -78,7 +82,6 @@ def main():
     #img = pg.gaussianFilter(np.random.normal(size=(300, 200)), (5, 5)) * 20
     #img = np.random.normal(size=(300, 200)) * 100
     img = np.random.uniform(0.0, 1.0, size=(300, 300))
-    img = np.square(img)
 
     #cmap = pg.ColorMap([0, 0.25, 0.75, 1], [[0, 0, 0, 255], [255, 0, 0, 255], [255, 255, 0, 255], [255, 255, 255, 255]])
     #lut0 = cmap.getLookupTable()

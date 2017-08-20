@@ -7,9 +7,13 @@ import logging
 import numpy as np
 import pyqtgraph as pg
 
-from pyqtgraph.Qt import QtWidgets
+from pyqtgraph.Qt import QtWidgets, QtCore
 
 logger = logging.getLogger(__name__)
+
+X_AXIS = pg.ViewBox.XAxis
+Y_AXIS = pg.ViewBox.YAxis
+BOTH_AXES = pg.ViewBox.XYAxes
 
 class ColorLegendItem(pg.GraphicsWidget):
     """ Color legend for an image plot.
@@ -29,13 +33,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.histViewBox.setMouseEnabled(x=False, y=True)
         #self.histViewBox.setFixedWidth(300)
         self.histPlotDataItem = pg.PlotDataItem()
-        if 0:
-            self.histPlotDataItem.rotate(90)
-        else:
-            # We need to mirror the data here. Perhaps therefore not a good idea
-            self.histPlotDataItem.scale(-1, 1)
-            self.histPlotDataItem.rotate(90)
-
+        self.histPlotDataItem.rotate(90)
 
         self.histViewBox.addItem(self.histPlotDataItem)
         self.fillHistogram(self.histogramFilled)
@@ -47,7 +45,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.layout.setContentsMargins(1, 1, 1, 1)
         self.layout.setSpacing(0)
 
-        self.axisItem = pg.AxisItem('left', linkView=self.histViewBox,
+        self.axisItem = pg.AxisItem('right', linkView=self.histViewBox,
                                     maxTickLength=-10, parent=self)
 
         # Image
@@ -67,13 +65,17 @@ class ColorLegendItem(pg.GraphicsWidget):
                                         yRange=[0, len(lut)],
                                         padding=0.0)
 
-        self.layout.addItem(self.axisItem, 0, 0)
+        self.layout.addItem(self.histViewBox, 0, 0)
         self.layout.addItem(self.colorScaleViewBox, 0, 1)
-        self.layout.addItem(self.histViewBox, 0, 2)
+        self.layout.addItem(self.axisItem, 0, 2)
 
+        # TODO: this will also trigger an update when the axis is resized.
+        # Perhaps we should test if the range has changed substantially before updating image levels.
         self.histViewBox.sigYRangeChanged.connect(
-            lambda _viewBox, range: self.setRange(range))
+            lambda _viewBox, range: self._updateImageLevels())
 
+        # # Testing
+        # self.histViewBox.sigRangeChangedManually.connect(self._updateImageLevels)
 
         self.imageChanged(autoLevel=True)
 
@@ -85,24 +87,29 @@ class ColorLegendItem(pg.GraphicsWidget):
         return self._imageItem
 
 
-    def setRange(self, range):
+    def setLevels(self, levels):
         """ Sets the value range of the legend
         """
+        logger.debug("ColorLegendItem.setLevels: {}".format(levels), stack_info=False)
+        lvlMin, lvlMax = levels
+        self.histViewBox.setYRange(lvlMin, lvlMax) # this works but leaves a margin
+
+
+
+    @QtCore.pyqtSlot()
+    def _updateImageLevels(self):
+        """ Updates the image levels from the axis item levels
+        """
+        levels = self.axisItem.range # == self.histViewBox.state['viewRange'][Y_AXIS]
+        logger.debug("updateImageToNewLevels: {}".format(levels))
         if self.imageItem is not None:
-            logger.debug("setRange: {}".format(range))
-            self.imageItem.setLevels(range)
+            self.imageItem.setLevels(levels)
 
-
-    def axisChanging(self):
-        """
-        """
-        if self.imageItem() is not None:
-            self.imageItem().setLevels(self.region.getRegion())
-        self.sigLevelsChanged.emit(self)
-        self.update()
 
 
     def fillHistogram(self, fill=True, level=0.0, color=(100, 100, 200)):
+        """ Fills the histogram
+        """
         if fill:
             self.histPlotDataItem.setFillLevel(level)
             self.histPlotDataItem.setFillBrush(color)
@@ -111,8 +118,11 @@ class ColorLegendItem(pg.GraphicsWidget):
 
 
     def imageChanged(self, autoLevel=False):
+        """" Called when a new image has been set.
 
-        logger.debug("ColorLegenItem.imageChagned(autoLevel={}) called".format(autoLevel))
+            Updates the histogram
+        """
+        logger.debug("ColorLegenItem.imageChanged(autoLevel={}) called".format(autoLevel))
 
         img = self.imageItem.image
         if img is None:
@@ -122,15 +132,12 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         logger.debug("histRange: {}".format(histRange))
 
-        h = self.imageItem.getHistogram(range=histRange)
-        if h[0] is None:
+        histogram = self.imageItem.getHistogram(range=histRange)
+        if histogram[0] is None:
+            logger.warning("Hisogram empty in imageChagned()") # when does this happen?
             return
         else:
-            hX, hY = h
-            #logger.debug("hist X: {} (len={})".format(hX, len(hX)))
-            #self.histPlotDataItem.setData(*h)
-            self.histPlotDataItem.setData(x=hX, y=hY)
-            logger.debug("hist X: {} (len={})".format(self.histPlotDataItem.xData, len(self.histPlotDataItem.xData)))
+            self.histPlotDataItem.setData(*histogram)
 
         # if autoLevel:
         #     mn = h[0][0]
