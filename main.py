@@ -8,7 +8,7 @@ import numpy as np
 from pyqtgraph.Qt import QtCore, QtGui, QtWidgets
 
 from pghistlutitem import HistogramLUTItem
-from colorlegend import ColorLegendItem
+from pgcolorbar.colorlegend import ColorLegendItem
 
 if 0:
     import pyqtgraph as pg
