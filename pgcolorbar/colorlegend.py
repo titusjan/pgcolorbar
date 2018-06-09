@@ -7,7 +7,9 @@ import logging
 import numpy as np
 import pyqtgraph as pg
 
-from pyqtgraph.Qt import QtWidgets, QtCore
+from pyqtgraph.Qt import QtWidgets, QtCore, QtGui
+
+from .misc import check_is_an_array
 
 logger = logging.getLogger(__name__)
 
@@ -18,10 +20,15 @@ BOTH_AXES = pg.ViewBox.XYAxes
 class ColorLegendItem(pg.GraphicsWidget):
     """ Color legend for an image plot.
     """
-    def __init__(self, lut, imageItem=None, barWidth=10):
+    def __init__(self, lut, imageItem=None, barWidth=4):
         """ Constructor.
         """
         pg.GraphicsWidget.__init__(self)
+
+        check_is_an_array(lut)
+        assert lut.ndim == 2, "Expected 2 dimensional array. Got {}D".format(lut.ndim)
+        assert lut.shape[1] == 3, \
+            "Second dimension of LUT should be length 3. Got: {}".format(lut.shape[1])
 
         self._lut = lut
         self._imageItem = imageItem
@@ -31,7 +38,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         # Histogram
         self.histViewBox = pg.ViewBox(enableMenu=False)
         self.histViewBox.setMouseEnabled(x=False, y=True)
-        #self.histViewBox.setFixedWidth(300)
+        self.histViewBox.setFixedWidth(50)
         self.histPlotDataItem = pg.PlotDataItem()
         self.histPlotDataItem.rotate(90)
 
@@ -52,12 +59,19 @@ class ColorLegendItem(pg.GraphicsWidget):
         lutImg = np.ones(shape=(len(lut), self.barWidth, 3), dtype=lut.dtype)
         lutImg[...] = lut[:, np.newaxis, :]
 
+        logger.debug("lutImg.shape: {}".format(lutImg.shape))
+        logger.debug("lutImg: {}".format(lutImg))
+
         colorScaleImageItem = pg.ImageItem()
         colorScaleImageItem.setImage(lutImg)
-        self.colorScaleViewBox = pg.ViewBox(enableMenu=False,
+        self.colorScaleViewBox = pg.ViewBox(enableMenu=True,
                                             border=pg.mkPen(pg.getConfigOption('foreground'),
                                                             width=1.5)) 
         self.colorScaleViewBox.addItem(colorScaleImageItem)
+
+        # rectItem = QtWidgets.QGraphicsRectItem(10, 20, 10, 20)
+        # rectItem.setBrush(QtGui.QBrush(QtGui.QColor(255, 0, 0)))
+        # self.colorScaleViewBox.addItem(rectItem)
         self.colorScaleViewBox.setMinimumWidth(10)
         self.colorScaleViewBox.setMaximumWidth(25)
 
@@ -79,6 +93,8 @@ class ColorLegendItem(pg.GraphicsWidget):
         # self.histViewBox.sigRangeChangedManually.connect(self._updateImageLevels)
 
         self.imageChanged(autoLevel=True)
+
+        self._updateImageLevels() # TODO: make setImageItem x
 
 
     @property
@@ -134,7 +150,7 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         histogram = self.imageItem.getHistogram(range=histRange)
         if histogram[0] is None:
-            logger.warning("Hisogram empty in imageChagned()") # when does this happen?
+            logger.warning("Histogram empty in imageChagned()") # when does this happen?
             return
         else:
             self.histPlotDataItem.setData(*histogram)

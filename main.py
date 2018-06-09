@@ -46,8 +46,6 @@ class MyWindow(QtWidgets.QWidget):
         extendedLut = np.append(lut, [lut[-1, :]], axis=0)
         self.imageItem.setLookupTable(extendedLut)
 
-
-
         self.plotItem.setRange(xRange=[0, nCols], yRange=[0, nRows])
 
         self.colorLegendItem = ColorLegendItem(lut=lut, imageItem=self.imageItem)
