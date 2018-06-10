@@ -38,7 +38,7 @@ class MyWindow(QtWidgets.QWidget):
         self.plotItem.addItem(self.imageItem)
 
         nRows, nCols = img.shape
-        self.imageItem.setImage(img)
+        self.imageItem.setImage(img.T) # PyQtGraph uses the following dimension order: T, X, Y, Color.
 
         # Duplicate last item because the pyqtgraph.makeARGB function has a wrong default scale. It
         # should be equal to the length of the LUT, but it's set to len(lut)-1. We therefore add a
@@ -90,6 +90,7 @@ def main():
     #img = pg.gaussianFilter(np.random.normal(size=(300, 200)), (5, 5)) * 20
     #img = np.random.normal(size=(300, 200)) * 100
     img = np.random.uniform(0.0, 1.0, size=(300, 300))
+    img[200:250, :] = 0.1
 
     #cmap = pg.ColorMap([0, 0.25, 0.75, 1], [[0, 0, 0, 255], [255, 0, 0, 255], [255, 255, 0, 255], [255, 255, 255, 255]])
     #lut0 = cmap.getLookupTable()
@@ -129,6 +130,6 @@ if __name__ == '__main__':
     logging.basicConfig(level='DEBUG', format=LOG_FMT)
 
     # Interpret image data as row-major instead of col-major
-    pg.setConfigOptions(imageAxisOrder='row-major')
+    #pg.setConfigOptions(imageAxisOrder='row-major')
 
     main()

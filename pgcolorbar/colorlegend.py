@@ -45,7 +45,6 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.histViewBox.addItem(self.histPlotDataItem)
         self.fillHistogram(self.histogramFilled)
 
-
         # Axis
         self.layout = QtWidgets.QGraphicsGridLayout()
         self.setLayout(self.layout)
@@ -56,22 +55,26 @@ class ColorLegendItem(pg.GraphicsWidget):
                                     maxTickLength=-10, parent=self)
 
         # Image of the color scale.
-        lutImg = np.ones(shape=(len(lut), self.barWidth, 3), dtype=lut.dtype)
-        lutImg[...] = lut[:, np.newaxis, :]
+        imgAxOrder = pg.getConfigOption('imageAxisOrder')
+        if imgAxOrder == 'col-major':
+            lutImg = np.ones(shape=(self.barWidth, len(lut), 3), dtype=lut.dtype)
+            lutImg[...] = lut[np.newaxis, :, :]
+        elif imgAxOrder == 'row-major':
+            lutImg = np.ones(shape=(len(lut), self.barWidth, 3), dtype=lut.dtype)
+            lutImg[...] = lut[:, np.newaxis, :]
+        else:
+            raise AssertionError("Unexpected imageAxisOrder config value: {}".format(imgAxOrder))
 
         logger.debug("lutImg.shape: {}".format(lutImg.shape))
         logger.debug("lutImg: {}".format(lutImg))
 
-        colorScaleImageItem = pg.ImageItem()
-        colorScaleImageItem.setImage(lutImg)
+        self.colorScaleImageItem = pg.ImageItem()
+        self.colorScaleImageItem.setImage(lutImg)
         self.colorScaleViewBox = pg.ViewBox(enableMenu=True,
                                             border=pg.mkPen(pg.getConfigOption('foreground'),
                                                             width=1.5)) 
-        self.colorScaleViewBox.addItem(colorScaleImageItem)
+        self.colorScaleViewBox.addItem(self.colorScaleImageItem)
 
-        # rectItem = QtWidgets.QGraphicsRectItem(10, 20, 10, 20)
-        # rectItem.setBrush(QtGui.QBrush(QtGui.QColor(255, 0, 0)))
-        # self.colorScaleViewBox.addItem(rectItem)
         self.colorScaleViewBox.setMinimumWidth(10)
         self.colorScaleViewBox.setMaximumWidth(25)
 
