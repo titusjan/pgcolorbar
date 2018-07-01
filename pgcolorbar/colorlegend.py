@@ -7,7 +7,8 @@ import logging
 import numpy as np
 import pyqtgraph as pg
 
-from pyqtgraph.Qt import QtWidgets, QtCore, QtGui
+from pyqtgraph.Qt import QtWidgets, QtCore
+
 
 from .misc import check_is_an_array
 
@@ -20,6 +21,8 @@ BOTH_AXES = pg.ViewBox.XYAxes
 class ColorLegendItem(pg.GraphicsWidget):
     """ Color legend for an image plot.
     """
+    sigLevelsChanged = QtCore.Signal(tuple)
+
     def __init__(self, lut, imageItem=None, barWidth=4):
         """ Constructor.
         """
@@ -107,12 +110,21 @@ class ColorLegendItem(pg.GraphicsWidget):
         return self._imageItem
 
 
-    def setLevels(self, levels):
-        """ Sets the value range of the legend
+    def getLevels(self):
+        """ Gets the value range of the legend
+        """
+        return self.histViewBox.state['viewRange'][Y_AXIS]
+
+
+    def setLevels(self, levels, padding=0):
+        """ Sets the value range of the legend.
+
+            :param int padding: percentage that will be added to the color range.
+                Use None for PyQtGraph's padding algorithm. Use 0 for no padding.
         """
         logger.debug("ColorLegendItem.setLevels: {}".format(levels), stack_info=False)
         lvlMin, lvlMax = levels
-        self.histViewBox.setYRange(lvlMin, lvlMax, padding=0)
+        self.histViewBox.setYRange(lvlMin, lvlMax, padding=padding)
 
 
     @QtCore.pyqtSlot()
@@ -120,10 +132,9 @@ class ColorLegendItem(pg.GraphicsWidget):
         """ Updates the image levels from the axis item levels
         """
         levels = self.axisItem.range # == self.histViewBox.state['viewRange'][Y_AXIS]
-        logger.debug("updateImageToNewLevels: {}".format(levels))
+        #logger.debug("updateImageToNewLevels: {}".format(levels))
         if self.imageItem is not None:
             self.imageItem.setLevels(levels)
-
 
 
     def fillHistogram(self, fill=True, level=0.0, color=(100, 100, 200)):
@@ -153,7 +164,7 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         histogram = self.imageItem.getHistogram(range=histRange)
         if histogram[0] is None:
-            logger.warning("Histogram empty in imageChagned()") # when does this happen?
+            logger.warning("Histogram empty in imageChanged()") # when does this happen?
             return
         else:
             self.histPlotDataItem.setData(*histogram)
