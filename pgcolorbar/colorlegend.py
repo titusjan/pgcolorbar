@@ -1,7 +1,7 @@
-""" Reimplementation of the PyQtGraph HistogramLUTItem.
+""" Color legend.
 
-    Currently only a histogram range in the imageChanged method is added. This prevents errors when
-    the image contains NaNs. Later the mouse and scrolling behaviour may be altered.
+    Consists of a vertical color bar with a draggable axis that displays the values of the colors.
+    Optionally a histogram may be displayed.
 """
 import logging
 import numpy as np
@@ -21,7 +21,7 @@ BOTH_AXES = pg.ViewBox.XYAxes
 class ColorLegendItem(pg.GraphicsWidget):
     """ Color legend for an image plot.
     """
-    sigLevelsChanged = QtCore.Signal(tuple)
+    sigLevelsChanged = QtCore.pyqtSignal(tuple) # TODO: use this
 
     def __init__(self, lut, imageItem=None, barWidth=4):
         """ Constructor.
@@ -35,8 +35,7 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         self._lut = lut
         self._imageItem = imageItem
-        self.barWidth = barWidth
-        self.histogramFilled = True
+        self._barWidth = barWidth
 
         # Histogram
         self.histViewBox = pg.ViewBox(enableMenu=False)
@@ -46,7 +45,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.histPlotDataItem.rotate(90)
 
         self.histViewBox.addItem(self.histPlotDataItem)
-        self.fillHistogram(self.histogramFilled)
+        self.fillHistogram()
 
         # Axis
         self.layout = QtWidgets.QGraphicsGridLayout()
@@ -60,16 +59,16 @@ class ColorLegendItem(pg.GraphicsWidget):
         # Image of the color scale.
         imgAxOrder = pg.getConfigOption('imageAxisOrder')
         if imgAxOrder == 'col-major':
-            lutImg = np.ones(shape=(self.barWidth, len(lut), 3), dtype=lut.dtype)
+            lutImg = np.ones(shape=(self._barWidth, len(lut), 3), dtype=lut.dtype)
             lutImg[...] = lut[np.newaxis, :, :]
         elif imgAxOrder == 'row-major':
-            lutImg = np.ones(shape=(len(lut), self.barWidth, 3), dtype=lut.dtype)
+            lutImg = np.ones(shape=(len(lut), self._barWidth, 3), dtype=lut.dtype)
             lutImg[...] = lut[:, np.newaxis, :]
         else:
             raise AssertionError("Unexpected imageAxisOrder config value: {}".format(imgAxOrder))
 
         logger.debug("lutImg.shape: {}".format(lutImg.shape))
-        logger.debug("lutImg: {}".format(lutImg))
+        #logger.debug("lutImg: {}".format(lutImg))
 
         self.colorScaleImageItem = pg.ImageItem()
         self.colorScaleImageItem.setImage(lutImg)
@@ -82,7 +81,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.colorScaleViewBox.setMaximumWidth(25)
 
         self.colorScaleViewBox.setMouseEnabled(x=False, y=False)
-        self.colorScaleViewBox.setRange(xRange=[0, self.barWidth],
+        self.colorScaleViewBox.setRange(xRange=[0, self._barWidth],
                                         yRange=[0, len(lut)],
                                         padding=0.0)
 
@@ -91,7 +90,8 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.layout.addItem(self.axisItem, 0, 2)
 
         # TODO: this will also trigger an update when the axis is resized. (Or does it?)
-        # Perhaps we should test if the range has changed substantially before updating image levels.
+        # Perhaps we should test if the range has changed substantially before updating image
+        # levels.
         self.histViewBox.sigYRangeChanged.connect(
             lambda _viewBox, range: self._updateImageLevels())
 
@@ -129,10 +129,10 @@ class ColorLegendItem(pg.GraphicsWidget):
 
     @QtCore.pyqtSlot()
     def _updateImageLevels(self):
-        """ Updates the image levels from the axis item levels
+        """ Updates the image levels from the color levels
         """
         levels = self.axisItem.range # == self.histViewBox.state['viewRange'][Y_AXIS]
-        #logger.debug("updateImageToNewLevels: {}".format(levels))
+        logger.debug("updateImageToNewLevels: {}".format(levels))
         if self.imageItem is not None:
             self.imageItem.setLevels(levels)
 
@@ -148,7 +148,7 @@ class ColorLegendItem(pg.GraphicsWidget):
 
 
     def imageChanged(self, autoLevel=False):
-        """" Called when a new image has been set.
+        """ Called when a new image has been set.
 
             Updates the histogram
         """
@@ -173,5 +173,4 @@ class ColorLegendItem(pg.GraphicsWidget):
         #     mn = h[0][0]
         #     mx = h[0][-1]
         #     self.region.setRegion([mn, mx])
-
 

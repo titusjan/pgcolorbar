@@ -24,7 +24,7 @@ import weakref
 __all__ = ['HistogramLUTItem']
 
 
-
+assert False, "not used"
 
 class HistogramLUTItem(GraphicsWidget):
     """
