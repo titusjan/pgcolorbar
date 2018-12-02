@@ -9,10 +9,16 @@ def is_an_array(var, allow_none=False):
 
 
 def check_is_an_array(var, allow_none=False):
-    """ Calls is_an_array and raises a type error if the check fails.
+    """ Calls is_an_array and raises a TypeError if the check fails.
     """
     if not is_an_array(var, allow_none=allow_none):
         raise TypeError("var must be a NumPy array, however type(var) is {}"
                         .format(type(var)))
 
+
+def check_class(var, cls, allowNone=False):
+    """ Checks if a variable is an instance of the cls class, raises TypeError if the check fails.
+    """
+    if not isinstance(var, cls) and not (allowNone and var is None):
+        raise TypeError("Unexpected type {}, was expecting {}".format(type(var), cls))
 

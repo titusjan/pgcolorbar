@@ -74,10 +74,11 @@ class MyWindow(QtWidgets.QMainWindow):
         self.plotItem.addItem(self.imageItem)
 
         # Duplicate last item because the pyqtgraph.makeARGB function has a wrong default scale. It
-        # should be equal to the length of the LUT, but it's set to len(lut)-1. We therefore add a
-        # fake LUT entry.
+        # should be equal to the length of the LUT, but it's set to len(lut)-1. (see line 984)
+        # We therefore add a fake LUT entry.
         extendedLut = np.append(lut, [lut[-1, :]], axis=0)
         self.imageItem.setLookupTable(extendedLut)
+        #self.imageItem.setLookupTable(lut)
 
         self.colorLegendItem = ColorLegendItem(lut=lut, imageItem=self.imageItem)
         self.colorLegendItem.setMinimumHeight(60)
@@ -120,7 +121,7 @@ class MyWindow(QtWidgets.QMainWindow):
         #img = pg.gaussianFilter(np.random.normal(size=(300, 200)), (5, 5)) * 20
         #img = np.random.normal(size=(300, 200)) * 100
         img = np.random.uniform(0.0, 1.0, size=(300, 300))
-        img[200:250, :] = 0.1
+        img[200:250, :] = 1.0
         self.setImage(img)
 
 
@@ -137,12 +138,14 @@ def main():
     if 0:
         lut1 = np.array([(0, 0, 0), (1, 1, 1), (2, 2, 2), (3, 3, 3)])
         data = np.array([[0.0, 0.25], [0.9999, 1.0]])
+        logger.debug("data: {}".format(data.shape))
 
-        res = pg.makeARGB(data, lut1, levels=(0, 1), scale=3)
-        logger.debug("scale=3, res: \n{}".format(res))
+        res, hasAlpha = pg.makeARGB(data, lut1, levels=(0, 1), scale=3)
 
-        res = pg.makeARGB(data, lut1, levels=(0, 1), scale=4)
-        logger.debug("scale=4, res: \n{}".format(res))
+        logger.debug("scale=3, res (shape={}): \n{}".format(res.shape, res))
+
+        res, hasAlpha = pg.makeARGB(data, lut1, levels=(0, 1), scale=4)
+        logger.debug("scale=4, res (shape={}): \n{}".format(res.shape, res))
 
         return
 

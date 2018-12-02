@@ -8,9 +8,10 @@ import numpy as np
 import pyqtgraph as pg
 
 from pyqtgraph.Qt import QtWidgets, QtCore
+from pyqtgraph import ImageItem
 
 
-from .misc import check_is_an_array
+from .misc import check_is_an_array, check_class
 
 logger = logging.getLogger(__name__)
 
@@ -20,23 +21,29 @@ BOTH_AXES = pg.ViewBox.XYAxes
 
 class ColorLegendItem(pg.GraphicsWidget):
     """ Color legend for an image plot.
+
+        Draws a color legend. It consists of a color bar and axis that show the range of the colors.
+        The color legend visualizes a lookup table (LUT) that maps a floating point value to an
+        RBG color value. With the lookup table colors can be assigned to an image.
+
+        By default a (rotated) histogram is drawn that shows the distribution of the values of all
+        pixels in the array.
     """
     sigLevelsChanged = QtCore.pyqtSignal(tuple) # TODO: use this
 
-    def __init__(self, lut, imageItem=None, barWidth=4):
+    def __init__(self, imageItem=None, lut=None, barWidth=4):
         """ Constructor.
+
         """
         pg.GraphicsWidget.__init__(self)
 
-        check_is_an_array(lut)
-        assert lut.ndim == 2, "Expected 2 dimensional array. Got {}D".format(lut.ndim)
-        assert lut.shape[1] == 3, \
-            "Second dimension of LUT should be length 3. Got: {}".format(lut.shape[1])
-
-        self._lut = lut
-        self._imageItem = imageItem
         self._barWidth = barWidth
+        self._imageItem = None
+        self._lut = None
 
+        self.setImageItem(imageItem)
+        self.setLut(lut)
+        
         # Histogram
         self.histViewBox = pg.ViewBox(enableMenu=False)
         self.histViewBox.setMouseEnabled(x=False, y=True)
@@ -92,8 +99,10 @@ class ColorLegendItem(pg.GraphicsWidget):
         # TODO: this will also trigger an update when the axis is resized. (Or does it?)
         # Perhaps we should test if the range has changed substantially before updating image
         # levels.
-        self.histViewBox.sigYRangeChanged.connect(
-            lambda _viewBox, range: self._updateImageLevels())
+        self.histViewBox.sigYRangeChanged.connect(self._updateImageLevels)
+
+        # self.histViewBox.sigYRangeChanged.connect(
+        #     lambda _viewBox, range: self._updateImageLevels())
 
         # # Testing
         # self.histViewBox.sigRangeChangedManually.connect(self._updateImageLevels)
@@ -103,11 +112,36 @@ class ColorLegendItem(pg.GraphicsWidget):
         self._updateImageLevels() # TODO: make setImageItem x
 
 
-    @property
-    def imageItem(self):
-        """ Returns the ImageItem that this legend is linked to.
+    def getImageItem(self):
+        """ Returns the PyQtGraph ImageItem that this legend is linked to.
         """
         return self._imageItem
+
+
+    def setImageItem(self, imageItem):
+        """ Links the legend to an image item.
+        """
+        check_class(imageItem, ImageItem)
+        self._imageItem = imageItem
+
+
+    def getLut(self):
+        """ Returns the Lookup table of the image item.
+        """
+        return self._lut
+
+
+    def setLut(self, lut):
+        """ Sets the lookup table to the image item.
+
+            :param ndarray Array: an N x 3 array.
+        """
+        check_is_an_array(lut)
+        assert lut.ndim == 2, "Expected 2 dimensional LUT. Got {}D".format(lut.ndim)
+        assert lut.shape[1] == 3, \
+            "Second dimension of LUT should be length 3. Got: {}".format(lut.shape[1])
+
+        self._lut = lut
 
 
     def getLevels(self):
@@ -129,12 +163,12 @@ class ColorLegendItem(pg.GraphicsWidget):
 
     @QtCore.pyqtSlot()
     def _updateImageLevels(self):
-        """ Updates the image levels from the color levels
+        """ Updates the image levels from the color levels of the
         """
         levels = self.axisItem.range # == self.histViewBox.state['viewRange'][Y_AXIS]
         logger.debug("updateImageToNewLevels: {}".format(levels))
-        if self.imageItem is not None:
-            self.imageItem.setLevels(levels)
+        if self._imageItem is not None:
+            self._imageItem.setLevels(levels)
 
 
     def fillHistogram(self, fill=True, level=0.0, color=(100, 100, 200)):
@@ -154,7 +188,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         """
         logger.debug("ColorLegenItem.imageChanged(autoLevel={}) called".format(autoLevel))
 
-        img = self.imageItem.image
+        img = self._imageItem.image
         if img is None:
             histRange = None
         else:
@@ -162,7 +196,7 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         logger.debug("histRange: {}".format(histRange))
 
-        histogram = self.imageItem.getHistogram(range=histRange)
+        histogram = self._imageItem.getHistogram(range=histRange)
         if histogram[0] is None:
             logger.warning("Histogram empty in imageChanged()") # when does this happen?
             return
