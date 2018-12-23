@@ -71,12 +71,12 @@ class MyWindow(QtWidgets.QMainWindow):
         viewBox.disableAutoRange(pg.ViewBox.XYAxes)
 
         self.imageItem = pg.ImageItem()
+        self.imageItem.setLookupTable(lut)
         self.plotItem.addItem(self.imageItem)
 
         self.colorLegendItem = ColorLegendItem(lut=lut, imageItem=self.imageItem)
         self.colorLegendItem.setMinimumHeight(60)
-        #self.imageItem.setLookupTable(lut)
-        self.colorLegendItem.setLut(lut)
+        self.colorLegendItem.setLut(lut) # It doesn't work when this is not set.
 
         self.graphicsLayoutWidget = pg.GraphicsLayoutWidget()
         self.graphicsLayoutWidget.addItem(self.plotItem, 0, 0)

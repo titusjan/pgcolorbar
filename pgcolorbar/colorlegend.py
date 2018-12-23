@@ -69,6 +69,8 @@ class ColorLegendItem(pg.GraphicsWidget):
         """
         pg.GraphicsWidget.__init__(self)
 
+        check_class(imageItem, pg.ImageItem, allowNone=False)  # None has not yet been tested
+
         self._imageItem = None
 
         # Histogram
@@ -79,7 +81,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.histPlotDataItem.rotate(90)
 
         self.histViewBox.addItem(self.histPlotDataItem)
-        self.fillHistogram()
+        #self.fillHistogram()
 
         # Color scale
         self.axisItem = pg.AxisItem(
@@ -110,10 +112,8 @@ class ColorLegendItem(pg.GraphicsWidget):
 
 
         self.setImageItem(imageItem)
-        self.setLut(lut)
-
-
-        self._updateImageLevels() # TODO: make setImageItem x
+        #self.setLut(lut)
+        #self._updateImageLevels() # TODO: make setImageItem x
 
 
 
@@ -126,6 +126,7 @@ class ColorLegendItem(pg.GraphicsWidget):
     def setImageItem(self, imageItem):
         """ Links the legend to an image item.
         """
+        logger.debug("setImageItem")
         check_class(imageItem, ImageItem, allowNone=True)
 
         # Remove old imageItem
@@ -133,10 +134,11 @@ class ColorLegendItem(pg.GraphicsWidget):
             self._imageItem.sigImageChanged.disconnect(self._onImageChanged)
 
         self._imageItem = imageItem
-        #self._imageItem.sigImageChanged.connect(self._onImageChanged)
+        self._imageItem.sigImageChanged.connect(self._onImageChanged)
 
+        if self._imageItem.lut is not None:
+            self.setLut(self._imageItem.lut) # extents lut if necessary
         self._onImageChanged()
-
 
 
     def _onImageChanged(self):
@@ -144,26 +146,37 @@ class ColorLegendItem(pg.GraphicsWidget):
 
             Updates the histogram and colorize the image (_updateImageLevels)
         """
-        logger.debug("ColorLegenItem._onImageChanged")
+        logger.debug("ColorLegendItem._onImageChanged", stack_info=False)
 
         img = self._imageItem.image
         if img is None:
             histRange = None
+            return
         else:
             histRange = (np.nanmin(img), np.nanmax(img))
 
-        logger.debug("histRange: {}".format(histRange))
+        #logger.debug("histRange: {}".format(histRange))
 
-        histogram = self._imageItem.getHistogram(range=histRange)
-        if histogram[0] is None:
-            logger.warning("Histogram empty in imageChanged()") # when does this happen?
-            return
-        else:
-            self.histPlotDataItem.setData(*histogram)
+        # histogram = self._imageItem.getHistogram(range=histRange)
+        # if histogram[0] is None:
+        #     logger.warning("Histogram empty in imageChanged()") # when does this happen?
+        #     return
+        # else:
+        #     self.histPlotDataItem.setData(*histogram)
 
         self._updateImageLevels()
 
-        
+
+    @QtCore.pyqtSlot()
+    def _updateImageLevels(self):
+        """ Updates the image levels from the color levels of the
+        """
+        levels = self.axisItem.range # which equals self.histViewBox.state['viewRange'][Y_AXIS]
+        logger.debug("updateImageToNewLevels: {}".format(levels), stack_info=False)
+        if self._imageItem is not None:
+            self._imageItem.setLevels(levels)
+
+
     def getLut(self):
         """ Returns the Lookup table of the image item.
         """
@@ -175,6 +188,7 @@ class ColorLegendItem(pg.GraphicsWidget):
 
             :param ndarray Array: an N x 3 array.
         """
+        logger.debug("setLut called")
         check_is_an_array(lut)
         assert lut.ndim == 2, "Expected 2 dimensional LUT. Got {}D".format(lut.ndim)
         assert lut.shape[1] == 3, \
@@ -192,6 +206,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         assert len(lut) == len(extendedLut) - 1, "Sanity check"
 
         if self._imageItem:
+            logger.debug("Setting image item to extended lut")
             self._imageItem.setLookupTable(extendedLut)
 
         # Draw a color scale that shows the LUT.
@@ -209,42 +224,36 @@ class ColorLegendItem(pg.GraphicsWidget):
         logger.debug("lutImg.shape: {}".format(lutImg.shape))
         self.colorScaleImageItem.setImage(lutImg)
 
+        yRange = [0, len(lut)]
+        #yRange = [-10, 10]
+        logger.debug("Setting colorScaleViewBox yrange to: {}".format(yRange))
         self.colorScaleViewBox.setRange(
-            xRange=[0, barWidth], yRange=[0, len(lut)], padding=0.0)
+            xRange=[0, barWidth], yRange=yRange, padding=0.0)
 
+    #
+    # def getLevels(self):
+    #     """ Gets the value range of the legend
+    #     """
+    #     return self.histViewBox.state['viewRange'][Y_AXIS]
+    #
+    #
+    # def setLevels(self, levels, padding=0):
+    #     """ Sets the value range of the legend.
+    #
+    #         :param int padding: percentage that will be added to the color range.
+    #             Use None for PyQtGraph's padding algorithm. Use 0 for no padding.
+    #     """
+    #     logger.debug("ColorLegendItem.setLevels: {}".format(levels), stack_info=False)
+    #     lvlMin, lvlMax = levels
+    #     self.histViewBox.setYRange(lvlMin, lvlMax, padding=padding)
+    #
 
-    def getLevels(self):
-        """ Gets the value range of the legend
-        """
-        return self.histViewBox.state['viewRange'][Y_AXIS]
-
-
-    def setLevels(self, levels, padding=0):
-        """ Sets the value range of the legend.
-
-            :param int padding: percentage that will be added to the color range.
-                Use None for PyQtGraph's padding algorithm. Use 0 for no padding.
-        """
-        logger.debug("ColorLegendItem.setLevels: {}".format(levels), stack_info=False)
-        lvlMin, lvlMax = levels
-        self.histViewBox.setYRange(lvlMin, lvlMax, padding=padding)
-
-
-    @QtCore.pyqtSlot()
-    def _updateImageLevels(self):
-        """ Updates the image levels from the color levels of the
-        """
-        levels = self.axisItem.range # == self.histViewBox.state['viewRange'][Y_AXIS]
-        #logger.debug("updateImageToNewLevels: {}".format(levels))
-        if self._imageItem is not None:
-            self._imageItem.setLevels(levels)
-
-
-    def fillHistogram(self, fill=True, level=0.0, color=(100, 100, 200)):
-        """ Fills the histogram
-        """
-        if fill:
-            self.histPlotDataItem.setFillLevel(level)
-            self.histPlotDataItem.setFillBrush(color)
-        else:
-            self.histPlotDataItem.setFillLevel(None)
+    #
+    # def fillHistogram(self, fill=True, level=0.0, color=(100, 100, 200)):
+    #     """ Fills the histogram
+    #     """
+    #     if fill:
+    #         self.histPlotDataItem.setFillLevel(level)
+    #         self.histPlotDataItem.setFillBrush(color)
+    #     else:
+    #         self.histPlotDataItem.setFillLevel(None)
