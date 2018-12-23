@@ -19,6 +19,38 @@ X_AXIS = pg.ViewBox.XAxis
 Y_AXIS = pg.ViewBox.YAxis
 BOTH_AXES = pg.ViewBox.XYAxes
 
+
+
+def assertIsLut(lut):
+    """ Checks that lut is Nx3 array
+    """
+    check_is_an_array(lut)
+    assert lut.ndim == 2, "Expected 2 dimensional LUT. Got {}D".format(lut.ndim)
+    assert lut.shape[1] == 3, \
+        "Second dimension of LUT should be length 3. Got: {}".format(lut.shape[1])
+
+
+def extentLut(lut):
+    """ Duplicates the last item of the Lookup Table
+
+        This is necessary because the pyqtgraph.makeARGB function has a wrong default scale. It
+        should be equal to the length of the LUT, but it's set to len(lut)-1. We therefore add a
+        fake LUT entry. See issue 792 of PyQtGraph.
+    """
+    assertIsLut(lut)
+    extendedLut = np.append(lut, [lut[-1, :]], axis=0)
+    return extendedLut
+
+
+def isExtended(lut):
+    """ Returns True if the lookup table has been extended with isExtended.
+        I.e. returns True if the last and second to last LUT entries are the same
+    """
+    assertIsLut(lut)
+    return np.array_equal(lut[-1, :], lut[-2, :])
+
+
+
 class ColorLegendItem(pg.GraphicsWidget):
     """ Color legend for an image plot.
 

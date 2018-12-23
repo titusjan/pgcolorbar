@@ -14,7 +14,7 @@ import pyqtgraph as pg
 
 from pyqtgraph.Qt import QtWidgets
 
-from pgcolorbar.colorlegend import ColorLegendItem
+from pgcolorbar.colorlegend import ColorLegendItem, extentLut, isExtended
 
 
 
@@ -76,8 +76,10 @@ class MyWindow(QtWidgets.QMainWindow):
         # Duplicate last item because the pyqtgraph.makeARGB function has a wrong default scale. It
         # should be equal to the length of the LUT, but it's set to len(lut)-1. (see line 984)
         # We therefore add a fake LUT entry.
-        extendedLut = np.append(lut, [lut[-1, :]], axis=0)
+        #extendedLut = np.append(lut, [lut[-1, :]], axis=0)
+        extendedLut = extentLut(lut)
         self.imageItem.setLookupTable(extendedLut)
+
         #self.imageItem.setLookupTable(lut)
 
         self.colorLegendItem = ColorLegendItem(lut=lut, imageItem=self.imageItem)
