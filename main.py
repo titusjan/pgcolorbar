@@ -115,8 +115,9 @@ class MyWindow(QtWidgets.QMainWindow):
         ## Create random 3D data set with noisy signals
         #img = pg.gaussianFilter(np.random.normal(size=(300, 200)), (5, 5)) * 20
         #img = np.random.normal(size=(300, 200)) * 100
-        img = np.random.uniform(0.0, 1.0, size=(300, 300))
-        img[200:205, :] = 1.0
+        maxVal = 1.0
+        img = np.random.uniform(0.0, 1.0, size=(300, 300)) * maxVal
+        img[200:205, :] = maxVal
         self.setImage(img)
 
 
@@ -130,19 +131,19 @@ def main():
     lut2 = np.array([(237,248,251), (204,236,230), (153,216,201), (102,194,164),
                      (65,174,118), (35,139,69), (0,88,36)])
 
-    if 0:
-        lut1 = np.array([(0, 0, 0), (1, 1, 1), (2, 2, 2), (3, 3, 3)])
-        data = np.array([[0.0, 0.25], [0.9999, 1.0]])
-        logger.debug("data: {}".format(data.shape))
-
-        res, hasAlpha = pg.makeARGB(data, lut1, levels=(0, 1), scale=3)
-
-        logger.debug("scale=3, res (shape={}): \n{}".format(res.shape, res))
-
-        res, hasAlpha = pg.makeARGB(data, lut1, levels=(0, 1), scale=4)
-        logger.debug("scale=4, res (shape={}): \n{}".format(res.shape, res))
-
-        return
+    # if 0:
+    #     lut1 = np.array([(0, 0, 0), (1, 1, 1), (2, 2, 2), (3, 3, 3)])
+    #     data = np.array([[0.0, 0.25], [0.9999, 1.0]])
+    #     logger.debug("data: {}".format(data.shape))
+    #
+    #     res, hasAlpha = pg.makeARGB(data, lut1, levels=(0, 1), scale=3)
+    #
+    #     logger.debug("scale=3, res (shape={}): \n{}".format(res.shape, res))
+    #
+    #     res, hasAlpha = pg.makeARGB(data, lut1, levels=(0, 1), scale=4)
+    #     logger.debug("scale=4, res (shape={}): \n{}".format(res.shape, res))
+    #
+    #     return
 
     ## Create window with ImageView widget
     win = MyWindow(lut=np.flipud(lut1))
