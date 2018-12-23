@@ -73,17 +73,10 @@ class MyWindow(QtWidgets.QMainWindow):
         self.imageItem = pg.ImageItem()
         self.plotItem.addItem(self.imageItem)
 
-        # Duplicate last item because the pyqtgraph.makeARGB function has a wrong default scale. It
-        # should be equal to the length of the LUT, but it's set to len(lut)-1. (see line 984)
-        # We therefore add a fake LUT entry.
-        #extendedLut = np.append(lut, [lut[-1, :]], axis=0)
-        extendedLut = extentLut(lut)
-        self.imageItem.setLookupTable(extendedLut)
-
-        #self.imageItem.setLookupTable(lut)
-
         self.colorLegendItem = ColorLegendItem(lut=lut, imageItem=self.imageItem)
         self.colorLegendItem.setMinimumHeight(60)
+        #self.imageItem.setLookupTable(lut)
+        self.colorLegendItem.setLut(lut)
 
         self.graphicsLayoutWidget = pg.GraphicsLayoutWidget()
         self.graphicsLayoutWidget.addItem(self.plotItem, 0, 0)

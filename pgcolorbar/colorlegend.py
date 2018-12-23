@@ -63,7 +63,7 @@ class ColorLegendItem(pg.GraphicsWidget):
     """
     sigLevelsChanged = QtCore.pyqtSignal(tuple) # TODO: use this
 
-    def __init__(self, imageItem=None, lut=None, barWidth=4):
+    def __init__(self, imageItem=None, lut=None, barWidth=40):
         """ Constructor.
 
         """
@@ -71,11 +71,7 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         self._barWidth = barWidth
         self._imageItem = None
-        self._lut = None
 
-        self.setImageItem(imageItem)
-        self.setLut(lut)
-        
         # Histogram
         self.histViewBox = pg.ViewBox(enableMenu=False)
         self.histViewBox.setMouseEnabled(x=False, y=True)
@@ -95,42 +91,22 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.axisItem = pg.AxisItem('right', linkView=self.histViewBox,
                                     maxTickLength=-10, parent=self)
 
-        # Image of the color scale.
-        imgAxOrder = pg.getConfigOption('imageAxisOrder')
-        if imgAxOrder == 'col-major':
-            lutImg = np.ones(shape=(self._barWidth, len(lut), 3), dtype=lut.dtype)
-            lutImg[...] = lut[np.newaxis, :, :]
-        elif imgAxOrder == 'row-major':
-            lutImg = np.ones(shape=(len(lut), self._barWidth, 3), dtype=lut.dtype)
-            lutImg[...] = lut[:, np.newaxis, :]
-        else:
-            raise AssertionError("Unexpected imageAxisOrder config value: {}".format(imgAxOrder))
-
-        logger.debug("lutImg.shape: {}".format(lutImg.shape))
-        #logger.debug("lutImg: {}".format(lutImg))
-
-        self.colorScaleImageItem = pg.ImageItem()
-        self.colorScaleImageItem.setImage(lutImg)
-        self.colorScaleViewBox = pg.ViewBox(enableMenu=True,
-                                            border=pg.mkPen(pg.getConfigOption('foreground'),
-                                                            width=1.5)) 
-        self.colorScaleViewBox.addItem(self.colorScaleImageItem)
-
+        self.colorScaleViewBox = pg.ViewBox(
+            enableMenu=True, border=pg.mkPen(pg.getConfigOption('foreground'), width=1.5))
+        self.colorScaleViewBox.setMouseEnabled(x=False, y=False)
         self.colorScaleViewBox.setMinimumWidth(10)
         self.colorScaleViewBox.setMaximumWidth(25)
 
-        self.colorScaleViewBox.setMouseEnabled(x=False, y=False)
-        self.colorScaleViewBox.setRange(xRange=[0, self._barWidth],
-                                        yRange=[0, len(lut)],
-                                        padding=0.0)
+        self.colorScaleImageItem = pg.ImageItem() # image data will be set in setLut
+        self.colorScaleViewBox.addItem(self.colorScaleImageItem)
 
         self.layout.addItem(self.histViewBox, 0, 0)
         self.layout.addItem(self.colorScaleViewBox, 0, 1)
         self.layout.addItem(self.axisItem, 0, 2)
 
-        # TODO: this will also trigger an update when the axis is resized. (Or does it?)
-        # Perhaps we should test if the range has changed substantially before updating image
-        # levels.
+        # This might also trigger an update when the axis is resized (but can't reproduce it
+        # anymore). If needed we could test if the range has changed substantially before updating
+        # image levels.
         self.histViewBox.sigYRangeChanged.connect(self._updateImageLevels)
 
         # self.histViewBox.sigYRangeChanged.connect(
@@ -139,9 +115,15 @@ class ColorLegendItem(pg.GraphicsWidget):
         # # Testing
         # self.histViewBox.sigRangeChangedManually.connect(self._updateImageLevels)
 
-        self.imageChanged(autoLevel=True)
+        self.setImageItem(imageItem)
+        self.setLut(lut)
 
+
+        self.imageChanged(autoLevel=True)
         self._updateImageLevels() # TODO: make setImageItem x
+
+
+
 
 
     def getImageItem(self):
@@ -160,7 +142,7 @@ class ColorLegendItem(pg.GraphicsWidget):
     def getLut(self):
         """ Returns the Lookup table of the image item.
         """
-        return self._lut
+        return self._imageItem.lut
 
 
     def setLut(self, lut):
@@ -173,7 +155,36 @@ class ColorLegendItem(pg.GraphicsWidget):
         assert lut.shape[1] == 3, \
             "Second dimension of LUT should be length 3. Got: {}".format(lut.shape[1])
 
-        self._lut = lut
+        if not isExtended(lut):
+            # The lookup table in the imageItem must be extended. See extentLut doc string
+            logger.debug("Side effect: duplicating last item of LUT in image item.")
+            extendedLut = extentLut(lut)
+        else:
+            # The lookup table in the imageItem already is extended. Draw the original
+            extendedLut = lut
+            lut = np.copy(lut[0:-1, :])
+
+        assert len(lut) == len(extendedLut) - 1, "Sanity check"
+
+        if self._imageItem:
+            self._imageItem.setLookupTable(extendedLut)
+
+        # Draw a color scale that shows the LUT.
+        imgAxOrder = pg.getConfigOption('imageAxisOrder')
+        if imgAxOrder == 'col-major':
+            lutImg = np.ones(shape=(self._barWidth, len(lut), 3), dtype=lut.dtype)
+            lutImg[...] = lut[np.newaxis, :, :]
+        elif imgAxOrder == 'row-major':
+            lutImg = np.ones(shape=(len(lut), self._barWidth, 3), dtype=lut.dtype)
+            lutImg[...] = lut[:, np.newaxis, :]
+        else:
+            raise AssertionError("Unexpected imageAxisOrder config value: {}".format(imgAxOrder))
+
+        logger.debug("lutImg.shape: {}".format(lutImg.shape))
+        self.colorScaleImageItem.setImage(lutImg)
+
+        self.colorScaleViewBox.setRange(
+            xRange=[0, self._barWidth], yRange=[0, len(lut)], padding=0.0)
 
 
     def getLevels(self):
@@ -198,7 +209,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         """ Updates the image levels from the color levels of the
         """
         levels = self.axisItem.range # == self.histViewBox.state['viewRange'][Y_AXIS]
-        logger.debug("updateImageToNewLevels: {}".format(levels))
+        #logger.debug("updateImageToNewLevels: {}".format(levels))
         if self._imageItem is not None:
             self._imageItem.setLevels(levels)
 
