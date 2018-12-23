@@ -116,7 +116,7 @@ class MyWindow(QtWidgets.QMainWindow):
         #img = pg.gaussianFilter(np.random.normal(size=(300, 200)), (5, 5)) * 20
         #img = np.random.normal(size=(300, 200)) * 100
         img = np.random.uniform(0.0, 1.0, size=(300, 300))
-        img[200:250, :] = 1.0
+        img[200:205, :] = 1.0
         self.setImage(img)
 
 
