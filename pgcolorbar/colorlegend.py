@@ -60,6 +60,12 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         By default a (rotated) histogram is drawn that shows the distribution of the values of all
         pixels in the array.
+
+        The histogram is linked to a PyQtGraph ImageItem. An ImageItem has a LUT member.
+        Unfortunately there is a bug in PyQtGraph when colorizing an image (issue 792). As a
+        work-around we extent this LUT by duplicating the last item. You must therefore set the
+        lut with ColorLegendItem.setLut, which adds this duplicate item (if not yet done). This
+        class therefore has a side effect.
     """
     sigLevelsChanged = QtCore.pyqtSignal(tuple) # TODO: use this
 

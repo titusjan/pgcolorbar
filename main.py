@@ -83,7 +83,7 @@ class MyWindow(QtWidgets.QMainWindow):
 
         self.colorLegendItem = ColorLegendItem(lut=lut, imageItem=self.imageItem)
         self.colorLegendItem.setMinimumHeight(60)
-        #self.colorLegendItem.setLut(lut) # It doesn't work when this is not set.
+        #self.colorLegendItem.setLut(lut)
 
         self.graphicsLayoutWidget = pg.GraphicsLayoutWidget()
         self.graphicsLayoutWidget.addItem(self.plotItem, 0, 0)
