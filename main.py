@@ -14,7 +14,7 @@ import pyqtgraph as pg
 
 from pyqtgraph.Qt import QtWidgets
 
-from pgcolorbar.colorlegend import ColorLegendItem, extentLut, isExtended
+from pgcolorbar.colorlegend import ColorLegendItem
 
 
 
@@ -42,7 +42,14 @@ class MyWindow(QtWidgets.QMainWindow):
         self.noiseImgAction = QtWidgets.QAction("Noise", self)
         self.noiseImgAction.setToolTip("Sets the image data to noise.")
         self.noiseImgAction.triggered.connect(self._setDataToNoise)
+        self.noiseImgAction.setShortcut("Ctrl+N")
         self.addAction(self.noiseImgAction)
+
+        self.myTestAction = QtWidgets.QAction("My Test", self)
+        self.myTestAction.setToolTip("My test")
+        self.myTestAction.triggered.connect(self.myTest)
+        self.myTestAction.setShortcut("Ctrl+T")
+        self.addAction(self.myTestAction)
 
 
     def _setupMenus(self):
@@ -76,7 +83,7 @@ class MyWindow(QtWidgets.QMainWindow):
 
         self.colorLegendItem = ColorLegendItem(lut=lut, imageItem=self.imageItem)
         self.colorLegendItem.setMinimumHeight(60)
-        self.colorLegendItem.setLut(lut) # It doesn't work when this is not set.
+        #self.colorLegendItem.setLut(lut) # It doesn't work when this is not set.
 
         self.graphicsLayoutWidget = pg.GraphicsLayoutWidget()
         self.graphicsLayoutWidget.addItem(self.plotItem, 0, 0)
@@ -112,6 +119,7 @@ class MyWindow(QtWidgets.QMainWindow):
     def _setDataToNoise(self):
         """ Sets image data to noise
         """
+        logger.debug("_setDataToNoise")
         ## Create random 3D data set with noisy signals
         #img = pg.gaussianFilter(np.random.normal(size=(300, 200)), (5, 5)) * 20
         #img = np.random.normal(size=(300, 200)) * 100
@@ -119,6 +127,13 @@ class MyWindow(QtWidgets.QMainWindow):
         img = np.random.uniform(0.0, 1.0, size=(300, 300)) * maxVal
         img[200:205, :] = maxVal
         self.setImage(img)
+
+
+    def myTest(self):
+
+        logger.info("myTest called")
+        self.colorLegendItem.colorScaleViewBox.setRange(
+            xRange=[0, 1], yRange=[0,5], padding=0.0)
 
 
 def main():
@@ -159,6 +174,6 @@ def main():
 
 if __name__ == '__main__':
     LOG_FMT = '%(asctime)s %(filename)25s:%(lineno)-4d : %(levelname)-7s: pid=%(process)d: %(message)s'
-    logging.basicConfig(level='DEBUG', format=LOG_FMT)
+    logging.basicConfig(level='INFO', format=LOG_FMT)
 
     main()

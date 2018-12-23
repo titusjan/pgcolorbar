@@ -81,7 +81,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.histPlotDataItem.rotate(90)
 
         self.histViewBox.addItem(self.histPlotDataItem)
-        #self.fillHistogram()
+        self.fillHistogram()
 
         # Color scale
         self.axisItem = pg.AxisItem(
@@ -89,6 +89,8 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         self.colorScaleViewBox = pg.ViewBox(
             enableMenu=True, border=pg.mkPen(pg.getConfigOption('foreground'), width=1.5))
+
+        self.colorScaleViewBox.disableAutoRange(pg.ViewBox.XYAxes)
         self.colorScaleViewBox.setMouseEnabled(x=False, y=False)
         self.colorScaleViewBox.setMinimumWidth(10)
         self.colorScaleViewBox.setMaximumWidth(25)
@@ -171,10 +173,32 @@ class ColorLegendItem(pg.GraphicsWidget):
     def _updateImageLevels(self):
         """ Updates the image levels from the color levels of the
         """
-        levels = self.axisItem.range # which equals self.histViewBox.state['viewRange'][Y_AXIS]
+        levels = self.getLevels()
         logger.debug("updateImageToNewLevels: {}".format(levels), stack_info=False)
         if self._imageItem is not None:
             self._imageItem.setLevels(levels)
+
+
+    def getLevels(self):
+        """ Gets the value range of the legend
+        """
+        levels = self.axisItem.range # which equals self.histViewBox.state['viewRange'][Y_AXIS]
+        assert self.axisItem.range == self.histViewBox.state['viewRange'][Y_AXIS], \
+            "Mismatch {} != {}".format(self.axisItem.range, self.histViewBox.state['viewRange'][Y_AXIS])
+        return levels
+
+
+    def setLevels(self, levels, padding=0.0):
+        """ Sets the value range of the legend.
+
+            :param int padding: percentage that will be added to the color range.
+                Use None for PyQtGraph's padding algorithm. Use 0 for no padding.
+        """
+        logger.debug("ColorLegendItem.setLevels: {}".format(levels), stack_info=False)
+        lvlMin, lvlMax = levels
+        self.histViewBox.setYRange(lvlMin, lvlMax, padding=padding)
+
+
 
 
     def getLut(self):
@@ -188,7 +212,7 @@ class ColorLegendItem(pg.GraphicsWidget):
 
             :param ndarray Array: an N x 3 array.
         """
-        logger.debug("setLut called")
+        logger.debug("------ setLut called")
         check_is_an_array(lut)
         assert lut.ndim == 2, "Expected 2 dimensional LUT. Got {}D".format(lut.ndim)
         assert lut.shape[1] == 3, \
@@ -225,35 +249,21 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.colorScaleImageItem.setImage(lutImg)
 
         yRange = [0, len(lut)]
-        #yRange = [-10, 10]
         logger.debug("Setting colorScaleViewBox yrange to: {}".format(yRange))
+
+        # Do not set disableAutoRange to True in setRange; it triggers 'one last' auto range.
+        # This is why the viewBox' autorange must be False at construction.
         self.colorScaleViewBox.setRange(
-            xRange=[0, barWidth], yRange=yRange, padding=0.0)
+            xRange=[0, barWidth], yRange=yRange, padding=0.0,
+            update=False, disableAutoRange=False)
 
-    #
-    # def getLevels(self):
-    #     """ Gets the value range of the legend
-    #     """
-    #     return self.histViewBox.state['viewRange'][Y_AXIS]
-    #
-    #
-    # def setLevels(self, levels, padding=0):
-    #     """ Sets the value range of the legend.
-    #
-    #         :param int padding: percentage that will be added to the color range.
-    #             Use None for PyQtGraph's padding algorithm. Use 0 for no padding.
-    #     """
-    #     logger.debug("ColorLegendItem.setLevels: {}".format(levels), stack_info=False)
-    #     lvlMin, lvlMax = levels
-    #     self.histViewBox.setYRange(lvlMin, lvlMax, padding=padding)
-    #
 
-    #
-    # def fillHistogram(self, fill=True, level=0.0, color=(100, 100, 200)):
-    #     """ Fills the histogram
-    #     """
-    #     if fill:
-    #         self.histPlotDataItem.setFillLevel(level)
-    #         self.histPlotDataItem.setFillBrush(color)
-    #     else:
-    #         self.histPlotDataItem.setFillLevel(None)
+
+    def fillHistogram(self, fill=True, level=0.0, color=(100, 100, 200)):
+        """ Fills the histogram
+        """
+        if fill:
+            self.histPlotDataItem.setFillLevel(level)
+            self.histPlotDataItem.setFillBrush(color)
+        else:
+            self.histPlotDataItem.setFillLevel(None)
