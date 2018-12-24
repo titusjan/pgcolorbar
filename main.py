@@ -1,9 +1,13 @@
 """ Demo program for the pgcolorbar module
 
-    TODO:
+    TODO
+        setHistogram(bool)
+        No image data
+        Longer and transparent tick marks.
+        Lines around color bar
+    Done:
         setData(array)
         setRange
-        setHistogram(bool)
         setLut(lut)
 """
 
@@ -38,6 +42,13 @@ class ImageLevelsConfigWidget(QtWidgets.QWidget):
         self.resetAction.setShortcut("Ctrl+0")
         self.addAction(self.resetAction)
 
+        self.toggleHistogramAction = QtWidgets.QAction("histogram", self)
+        self.toggleHistogramAction.setCheckable(True)
+        self.toggleHistogramAction.setChecked(True)
+        self.toggleHistogramAction.triggered.connect(self.colorLegendItem.showHistogram)
+        self.toggleHistogramAction.setShortcut("Ctrl+H")
+        self.addAction(self.toggleHistogramAction)
+
         self.mainLayout = QtWidgets.QHBoxLayout()
         self.mainLayout.setContentsMargins(5, 0, 5, 0) # left, top, right, bottom
         self.mainLayout.setSpacing(3)
@@ -71,6 +82,10 @@ class ImageLevelsConfigWidget(QtWidgets.QWidget):
 
         self.resetButton = QtWidgets.QToolButton()
         self.resetButton.setDefaultAction(self.resetAction)
+
+        self.histogramButton = QtWidgets.QToolButton()
+        self.histogramButton.setDefaultAction(self.toggleHistogramAction)
+
         self.mainLayout.addWidget(self.resetButton)
 
 

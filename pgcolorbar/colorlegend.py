@@ -81,6 +81,7 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         # Histogram
         self.histViewBox = pg.ViewBox(enableMenu=False)
+        self.histViewBox.disableAutoRange(pg.ViewBox.YAxis)
         self.histViewBox.setMouseEnabled(x=False, y=True)
         self.histViewBox.setFixedWidth(50)
         self.histPlotDataItem = pg.PlotDataItem()
@@ -118,10 +119,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         # image levels.
         self.histViewBox.sigYRangeChanged.connect(self._updateImageLevels)
 
-
         self.setImageItem(imageItem)
-        #self.setLut(lut)
-        #self._updateImageLevels() # TODO: make setImageItem x
 
 
 
@@ -163,14 +161,14 @@ class ColorLegendItem(pg.GraphicsWidget):
         else:
             histRange = (np.nanmin(img), np.nanmax(img))
 
-        #logger.debug("histRange: {}".format(histRange))
+        logger.debug("histRange: {}".format(histRange))
 
-        # histogram = self._imageItem.getHistogram(range=histRange)
-        # if histogram[0] is None:
-        #     logger.warning("Histogram empty in imageChanged()") # when does this happen?
-        #     return
-        # else:
-        #     self.histPlotDataItem.setData(*histogram)
+        histogram = self._imageItem.getHistogram(range=histRange)
+        if histogram[0] is None:
+            logger.warning("Histogram empty in imageChanged()") # when does this happen?
+            return
+        else:
+            self.histPlotDataItem.setData(*histogram)
 
         self._updateImageLevels()
 
@@ -180,7 +178,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         """ Updates the image levels from the color levels of the
         """
         levels = self.getLevels()
-        logger.debug("updateImageToNewLevels: {}".format(levels), stack_info=False)
+        #logger.debug("updateImageToNewLevels: {}".format(levels), stack_info=False)
         if self._imageItem is not None:
             self._imageItem.setLevels(levels)
 
@@ -188,7 +186,8 @@ class ColorLegendItem(pg.GraphicsWidget):
 
 
     def resetColorLevels(self):
-        """ Sets the color levels from the min and max of the image"""
+        """ Sets the color levels from the min and max of the image
+        """
         logger.debug("Reset scale")
 
         img = self._imageItem.image
@@ -202,13 +201,13 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.setLevels(levels)
 
 
-
     def getLevels(self):
         """ Gets the value range of the legend
         """
         levels = self.axisItem.range # which equals self.histViewBox.state['viewRange'][Y_AXIS]
         assert self.axisItem.range == self.histViewBox.state['viewRange'][Y_AXIS], \
-            "Mismatch {} != {}".format(self.axisItem.range, self.histViewBox.state['viewRange'][Y_AXIS])
+            "Sanity check failed {} != {}".format(self.axisItem.range,
+                                       self.histViewBox.state['viewRange'][Y_AXIS])
         return tuple(levels)
 
 
@@ -218,7 +217,7 @@ class ColorLegendItem(pg.GraphicsWidget):
             :param int padding: percentage that will be added to the color range.
                 Use None for PyQtGraph's padding algorithm. Use 0 for no padding.
         """
-        logger.debug("ColorLegendItem.setLevels: {}".format(levels), stack_info=False)
+        #logger.debug("ColorLegendItem.setLevels: {}".format(levels), stack_info=False)
         lvlMin, lvlMax = levels
         # Note: histViewBox.setYRange will call _updateImageLevels, which will emit sigLevelsChanged
         self.histViewBox.setYRange(lvlMin, lvlMax, padding=padding)
@@ -280,6 +279,10 @@ class ColorLegendItem(pg.GraphicsWidget):
             xRange=[0, barWidth], yRange=yRange, padding=0.0,
             update=False, disableAutoRange=False)
 
+
+    def showHistogram(self, show):
+        """ Toggle histogram on or off"""
+        logger.debug("showHistogram: {}".format(show))
 
 
     def fillHistogram(self, fill=True, level=0.0, color=(100, 100, 200)):
