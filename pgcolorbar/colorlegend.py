@@ -184,6 +184,8 @@ class ColorLegendItem(pg.GraphicsWidget):
         if self._imageItem is not None:
             self._imageItem.setLevels(levels)
 
+        self.sigLevelsChanged.emit(levels)
+
 
     def getLevels(self):
         """ Gets the value range of the legend
@@ -191,7 +193,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         levels = self.axisItem.range # which equals self.histViewBox.state['viewRange'][Y_AXIS]
         assert self.axisItem.range == self.histViewBox.state['viewRange'][Y_AXIS], \
             "Mismatch {} != {}".format(self.axisItem.range, self.histViewBox.state['viewRange'][Y_AXIS])
-        return levels
+        return tuple(levels)
 
 
     def setLevels(self, levels, padding=0.0):
@@ -202,9 +204,8 @@ class ColorLegendItem(pg.GraphicsWidget):
         """
         logger.debug("ColorLegendItem.setLevels: {}".format(levels), stack_info=False)
         lvlMin, lvlMax = levels
+        # Note: histViewBox.setYRange will call _updateImageLevels, which will emit sigLevelsChanged
         self.histViewBox.setYRange(lvlMin, lvlMax, padding=padding)
-
-
 
 
     def getLut(self):

@@ -12,13 +12,103 @@ import numpy as np
 
 import pyqtgraph as pg
 
-from pyqtgraph.Qt import QtWidgets
+from pyqtgraph.Qt import QtWidgets, QtCore
+
 
 from pgcolorbar.colorlegend import ColorLegendItem
 
 
 
 logger = logging.getLogger(__name__)
+
+
+
+class ImageLevelsConfigWidget(QtWidgets.QWidget):
+    """ Config widget with two spinboxes that control the image levels.
+    """
+    def __init__(self, colorLegendItem, label=None, parent=None):
+        """ Constructor
+        """
+        super().__init__(parent=parent)
+
+        self.colorLegendItem = colorLegendItem
+
+        self.mainLayout = QtWidgets.QHBoxLayout()
+        self.mainLayout.setContentsMargins(5, 0, 5, 0) # left, top, right, bottom
+        self.mainLayout.setSpacing(3)
+        self.setLayout(self.mainLayout)
+
+        if label is None:
+            self.label = None
+        else:
+            self.label = QtWidgets.QLabel(label)
+            self.mainLayout.addWidget(self.label)
+
+        self.minLevelSpinBox = QtWidgets.QDoubleSpinBox()
+        self.minLevelSpinBox.setKeyboardTracking(False)
+        self.minLevelSpinBox.setMinimum(-10000)
+        self.minLevelSpinBox.setMaximum(10000)
+        self.minLevelSpinBox.setSingleStep(0.1)
+        self.minLevelSpinBox.setDecimals(3)
+        self.mainLayout.addWidget(self.minLevelSpinBox)
+
+        self.maxLevelSpinBox = QtWidgets.QDoubleSpinBox()
+        self.maxLevelSpinBox.setKeyboardTracking(False)
+        self.maxLevelSpinBox.setMinimum(-10000)
+        self.maxLevelSpinBox.setMaximum(10000)
+        self.maxLevelSpinBox.setSingleStep(0.1)
+        self.maxLevelSpinBox.setDecimals(3)
+        self.mainLayout.addWidget(self.maxLevelSpinBox)
+
+        self.minLevelSpinBox.valueChanged.connect(lambda val: self.setLevels((val, None)))
+        self.maxLevelSpinBox.valueChanged.connect(lambda val: self.setLevels((None, val)))
+        self.colorLegendItem.sigLevelsChanged.connect(self._updateSpinBoxLevels)
+
+        self.resetButton = QtWidgets.QToolButton()
+        #self.resetButton.setDefaultAction(self.resetAction)
+        self.mainLayout.addWidget(self.resetButton)
+
+
+    def finalize(self):
+        """ Should be called manually before object deletion
+        """
+        logger.debug("Finalizing: {}".format(self))
+        super().finalize()
+
+
+    def setLevels(self, levels):
+        """ Sets plot levels
+            :param levels: (vMin, vMax) tuple
+        """
+        logger.debug("Setting image levels: {}".format(levels))
+        minLevel, maxLevel = levels
+
+        # Replace Nones by the current level
+        oldMin, oldMax = self.colorLegendItem.getLevels()
+        logger.debug("Old levels: {}".format(levels))
+
+        if minLevel is None: # Only maxLevel was set.
+            minLevel = oldMin
+            if maxLevel <= minLevel:
+                minLevel = maxLevel - 1
+
+        if maxLevel is None: # Only minLevel was set
+            maxLevel = oldMax
+            if maxLevel <= minLevel:
+                maxLevel = minLevel + 1
+
+        self.colorLegendItem.setLevels((minLevel, maxLevel))
+
+
+    def _updateSpinBoxLevels(self, levels):
+        """ Updates the spinboxes given the levels
+        """
+        minLevel, maxLevel = levels
+        logger.debug("_updateSpinBoxLevels: {}".format(levels))
+        self.minLevelSpinBox.setValue(minLevel)
+        self.maxLevelSpinBox.setValue(maxLevel)
+
+
 
 
 class MyWindow(QtWidgets.QMainWindow):
@@ -29,6 +119,7 @@ class MyWindow(QtWidgets.QMainWindow):
         self._setupActions()
         self._setupMenus()
         self._setupViews(lut)
+        self._setDataToNoise()
 
 
     def _setupActions(self):
@@ -57,6 +148,8 @@ class MyWindow(QtWidgets.QMainWindow):
         """
         self.menuBar = QtWidgets.QMenuBar() # Make a menu without parent.
         self.setMenuBar(self.menuBar)
+
+        self.viewMenu = self.menuBar.addMenu("&View")
 
         self.dataMenu = self.menuBar.addMenu("&Data")
         self.dataMenu.addAction(self.noiseImgAction)
@@ -91,7 +184,24 @@ class MyWindow(QtWidgets.QMainWindow):
 
         self.mainLayout.addWidget(self.graphicsLayoutWidget)
 
-        self._setDataToNoise()
+        # Toolbar
+        self.imgToolBar = QtWidgets.QToolBar("Tool Bar", self)
+        self.setObjectName("toolbar")
+        self.imgToolBar.setFloatable(False)
+        self.imgToolBar.setAllowedAreas(QtCore.Qt.TopToolBarArea | QtCore.Qt.BottomToolBarArea)
+
+        # # Adding actions. Must be done here because the setView also adds some actions.
+        # for action in self.actions():
+        #     if action != self.resetLevelsAction:
+        #         self.imgToolBar.addAction(action)
+
+        self.imgLevelsConfigWidget = ImageLevelsConfigWidget(self.colorLegendItem,
+                                                             label="Color Range")
+        self.imgToolBar.addWidget(self.imgLevelsConfigWidget)
+
+        self.addToolBar(QtCore.Qt.TopToolBarArea, self.imgToolBar)
+        self.viewMenu.addAction(self.imgToolBar.toggleViewAction())
+
 
 
     def resetScale(self):
@@ -174,6 +284,6 @@ def main():
 
 if __name__ == '__main__':
     LOG_FMT = '%(asctime)s %(filename)25s:%(lineno)-4d : %(levelname)-7s: pid=%(process)d: %(message)s'
-    logging.basicConfig(level='INFO', format=LOG_FMT)
+    logging.basicConfig(level='DEBUG', format=LOG_FMT)
 
     main()
