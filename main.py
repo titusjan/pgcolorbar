@@ -33,6 +33,11 @@ class ImageLevelsConfigWidget(QtWidgets.QWidget):
 
         self.colorLegendItem = colorLegendItem
 
+        self.resetAction = QtWidgets.QAction("reset", self)
+        self.resetAction.triggered.connect(self.colorLegendItem.resetColorLevels)
+        self.resetAction.setShortcut("Ctrl+0")
+        self.addAction(self.resetAction)
+
         self.mainLayout = QtWidgets.QHBoxLayout()
         self.mainLayout.setContentsMargins(5, 0, 5, 0) # left, top, right, bottom
         self.mainLayout.setSpacing(3)
@@ -65,7 +70,7 @@ class ImageLevelsConfigWidget(QtWidgets.QWidget):
         self.colorLegendItem.sigLevelsChanged.connect(self._updateSpinBoxLevels)
 
         self.resetButton = QtWidgets.QToolButton()
-        #self.resetButton.setDefaultAction(self.resetAction)
+        self.resetButton.setDefaultAction(self.resetAction)
         self.mainLayout.addWidget(self.resetButton)
 
 
@@ -125,10 +130,6 @@ class MyWindow(QtWidgets.QMainWindow):
     def _setupActions(self):
         """ Creates the UI actions.
         """
-        self.resetAction = QtWidgets.QAction("reset", self)
-        self.resetAction.triggered.connect(self.resetScale)
-        self.resetAction.setShortcut("Ctrl+0")
-        self.addAction(self.resetAction)
 
         self.noiseImgAction = QtWidgets.QAction("Noise", self)
         self.noiseImgAction.setToolTip("Sets the image data to noise.")
@@ -203,18 +204,6 @@ class MyWindow(QtWidgets.QMainWindow):
         self.viewMenu.addAction(self.imgToolBar.toggleViewAction())
 
 
-
-    def resetScale(self):
-        logger.debug("Reset scale")
-
-        img = self.imageItem.image
-        assert isinstance(img, np.ndarray)
-
-        if 0:
-            levels = (np.nanmin(img), np.nanmax(img))
-        else:
-            levels = (0.0, 1.0)
-        self.colorLegendItem.setLevels(levels)
 
 
     def setImage(self, img):

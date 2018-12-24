@@ -187,6 +187,22 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.sigLevelsChanged.emit(levels)
 
 
+    def resetColorLevels(self):
+        """ Sets the color levels from the min and max of the image"""
+        logger.debug("Reset scale")
+
+        img = self._imageItem.image
+        check_is_an_array(img, allow_none=True)
+
+        if img is None:
+            levels = (0.0, 1.0)
+        else:
+            levels = (np.nanmin(img), np.nanmax(img))
+
+        self.setLevels(levels)
+
+
+
     def getLevels(self):
         """ Gets the value range of the legend
         """
