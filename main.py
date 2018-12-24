@@ -15,16 +15,10 @@ import logging
 import numpy as np
 
 import pyqtgraph as pg
-
 from pyqtgraph.Qt import QtWidgets, QtCore
-
-
 from pgcolorbar.colorlegend import ColorLegendItem
 
-
-
 logger = logging.getLogger(__name__)
-
 
 
 class ImageLevelsConfigWidget(QtWidgets.QWidget):
@@ -44,9 +38,9 @@ class ImageLevelsConfigWidget(QtWidgets.QWidget):
 
         self.toggleHistogramAction = QtWidgets.QAction("histogram", self)
         self.toggleHistogramAction.setCheckable(True)
-        self.toggleHistogramAction.setChecked(True)
+        self.toggleHistogramAction.setChecked(self.colorLegendItem.histogramIsVisible)
         self.toggleHistogramAction.triggered.connect(self.colorLegendItem.showHistogram)
-        self.toggleHistogramAction.setShortcut("Ctrl+H")
+        self.toggleHistogramAction.setShortcut("Ctrl+S")
         self.addAction(self.toggleHistogramAction)
 
         self.mainLayout = QtWidgets.QHBoxLayout()
@@ -82,11 +76,12 @@ class ImageLevelsConfigWidget(QtWidgets.QWidget):
 
         self.resetButton = QtWidgets.QToolButton()
         self.resetButton.setDefaultAction(self.resetAction)
+        self.mainLayout.addWidget(self.resetButton)
 
         self.histogramButton = QtWidgets.QToolButton()
         self.histogramButton.setDefaultAction(self.toggleHistogramAction)
+        self.mainLayout.addWidget(self.histogramButton)
 
-        self.mainLayout.addWidget(self.resetButton)
 
 
     def finalize(self):
@@ -131,21 +126,23 @@ class ImageLevelsConfigWidget(QtWidgets.QWidget):
 
 
 
-class MyWindow(QtWidgets.QMainWindow):
+class DemoWindow(QtWidgets.QMainWindow):
 
-    def __init__(self, lut, parent=None):
+    def __init__(self, lut, showHistogram, parent=None):
         super().__init__(parent=parent)
 
         self._setupActions()
         self._setupMenus()
-        self._setupViews(lut)
+        self._setupViews(lut, showHistogram)
         self._setDataToNoise()
+
+        self.imgLevelsConfigWidget.toggleHistogramAction.setChecked(showHistogram)
+
 
 
     def _setupActions(self):
         """ Creates the UI actions.
         """
-
         self.noiseImgAction = QtWidgets.QAction("Noise", self)
         self.noiseImgAction.setToolTip("Sets the image data to noise.")
         self.noiseImgAction.triggered.connect(self._setDataToNoise)
@@ -171,8 +168,7 @@ class MyWindow(QtWidgets.QMainWindow):
         self.dataMenu.addAction(self.noiseImgAction)
 
 
-
-    def _setupViews(self, lut):
+    def _setupViews(self, lut, showHistogram):
         """ Creates the UI widgets.
         """
         self.mainWidget = QtWidgets.QWidget()
@@ -190,7 +186,8 @@ class MyWindow(QtWidgets.QMainWindow):
         self.imageItem.setLookupTable(lut)
         self.plotItem.addItem(self.imageItem)
 
-        self.colorLegendItem = ColorLegendItem(lut=lut, imageItem=self.imageItem)
+        self.colorLegendItem = ColorLegendItem(
+            imageItem=self.imageItem, showHistogram=showHistogram)
         self.colorLegendItem.setMinimumHeight(60)
         #self.colorLegendItem.setLut(lut)
 
@@ -206,19 +203,12 @@ class MyWindow(QtWidgets.QMainWindow):
         self.imgToolBar.setFloatable(False)
         self.imgToolBar.setAllowedAreas(QtCore.Qt.TopToolBarArea | QtCore.Qt.BottomToolBarArea)
 
-        # # Adding actions. Must be done here because the setView also adds some actions.
-        # for action in self.actions():
-        #     if action != self.resetLevelsAction:
-        #         self.imgToolBar.addAction(action)
-
-        self.imgLevelsConfigWidget = ImageLevelsConfigWidget(self.colorLegendItem,
-                                                             label="Color Range")
+        self.imgLevelsConfigWidget = ImageLevelsConfigWidget(
+            self.colorLegendItem, label="Color Range")
         self.imgToolBar.addWidget(self.imgLevelsConfigWidget)
 
         self.addToolBar(QtCore.Qt.TopToolBarArea, self.imgToolBar)
         self.viewMenu.addAction(self.imgToolBar.toggleViewAction())
-
-
 
 
     def setImage(self, img):
@@ -275,7 +265,7 @@ def main():
     #     return
 
     ## Create window with ImageView widget
-    win = MyWindow(lut=np.flipud(lut1))
+    win = DemoWindow(lut=np.flipud(lut1), showHistogram=False)
 
 
     win.setGeometry(400, 100, 700, 600)

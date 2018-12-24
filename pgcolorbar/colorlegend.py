@@ -69,7 +69,7 @@ class ColorLegendItem(pg.GraphicsWidget):
     """
     sigLevelsChanged = QtCore.pyqtSignal(tuple) # TODO: use this
 
-    def __init__(self, imageItem=None, lut=None):
+    def __init__(self, imageItem=None, showHistogram=True):
         """ Constructor.
 
         """
@@ -77,13 +77,15 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         check_class(imageItem, pg.ImageItem, allowNone=False)  # None has not yet been tested
 
+        self._histogramIsVisible = showHistogram
+        self.histogramWidth = 50
         self._imageItem = None
 
         # Histogram
         self.histViewBox = pg.ViewBox(enableMenu=False)
         self.histViewBox.disableAutoRange(pg.ViewBox.YAxis)
         self.histViewBox.setMouseEnabled(x=False, y=True)
-        self.histViewBox.setFixedWidth(50)
+        self.histViewBox.setFixedWidth(self.histogramWidth)
         self.histPlotDataItem = pg.PlotDataItem()
         self.histPlotDataItem.rotate(90)
 
@@ -119,8 +121,8 @@ class ColorLegendItem(pg.GraphicsWidget):
         # image levels.
         self.histViewBox.sigYRangeChanged.connect(self._updateImageLevels)
 
+        self.showHistogram(showHistogram)
         self.setImageItem(imageItem)
-
 
 
     def getImageItem(self):
@@ -153,11 +155,19 @@ class ColorLegendItem(pg.GraphicsWidget):
             Updates the histogram and colorize the image (_updateImageLevels)
         """
         logger.debug("ColorLegendItem._onImageChanged", stack_info=False)
+        self._updateHistogram()
+        self._updateImageLevels()
+
+
+    def _updateHistogram(self):
+        """ Updates the histogram with data from the image
+        """
+        if not self._histogramIsVisible:
+            return
 
         img = self._imageItem.image
         if img is None:
             histRange = None
-            return
         else:
             histRange = (np.nanmin(img), np.nanmax(img))
 
@@ -169,8 +179,6 @@ class ColorLegendItem(pg.GraphicsWidget):
             return
         else:
             self.histPlotDataItem.setData(*histogram)
-
-        self._updateImageLevels()
 
 
     @QtCore.pyqtSlot()
@@ -185,6 +193,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.sigLevelsChanged.emit(levels)
 
 
+    @QtCore.pyqtSlot()
     def resetColorLevels(self):
         """ Sets the color levels from the min and max of the image
         """
@@ -211,6 +220,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         return tuple(levels)
 
 
+    @QtCore.pyqtSlot(tuple)
     def setLevels(self, levels, padding=0.0):
         """ Sets the value range of the legend.
 
@@ -280,9 +290,26 @@ class ColorLegendItem(pg.GraphicsWidget):
             update=False, disableAutoRange=False)
 
 
+    @property
+    def histogramIsVisible(self):
+        """ Indicates if the histogram is visible
+        """
+        return self._histogramIsVisible
+
+
+    @QtCore.pyqtSlot(bool)
     def showHistogram(self, show):
-        """ Toggle histogram on or off"""
-        logger.debug("showHistogram: {}".format(show))
+        """ Toggle histogram on or off.
+        """
+        #logger.debug("showHistogram: {}".format(show))
+        self._histogramIsVisible = show
+        if show:
+            self.histViewBox.setFixedWidth(self.histogramWidth)
+            self.histPlotDataItem.show()
+            self._updateHistogram()
+        else:
+            self.histViewBox.setFixedWidth(1) # zero gives error
+            self.histPlotDataItem.hide()
 
 
     def fillHistogram(self, fill=True, level=0.0, color=(100, 100, 200)):
