@@ -51,6 +51,8 @@ def isExtended(lut):
 
 
 
+
+
 class ColorLegendItem(pg.GraphicsWidget):
     """ Color legend for an image plot.
 
@@ -86,6 +88,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.histViewBox.disableAutoRange(pg.ViewBox.YAxis)
         self.histViewBox.setMouseEnabled(x=False, y=True)
         self.histViewBox.setFixedWidth(self.histogramWidth)
+
         self.histPlotDataItem = pg.PlotDataItem()
         self.histPlotDataItem.rotate(90)
 
@@ -93,8 +96,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.fillHistogram()
 
         # Color scale
-        self.colorScaleViewBox = pg.ViewBox(
-            enableMenu=True, border=pg.mkPen(pg.getConfigOption('foreground'), width=1.5))
+        self.colorScaleViewBox = pg.ViewBox(enableMenu=False, border=None)
 
         self.colorScaleViewBox.disableAutoRange(pg.ViewBox.XYAxes)
         self.colorScaleViewBox.setMouseEnabled(x=False, y=False)
@@ -103,11 +105,18 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         self.colorScaleImageItem = pg.ImageItem() # image data will be set in setLut
         self.colorScaleViewBox.addItem(self.colorScaleImageItem)
+        self.colorScaleViewBox.setZValue(10)
 
-        logger.debug("colorScaleViewBox, width {}".format(self.colorScaleViewBox.width()))
+        # Overlay
+        self.overlayViewBox = pg.ViewBox(
+            enableMenu=False, border=pg.mkPen(pg.getConfigOption('foreground'), width=1))
+        self.overlayViewBox.setZValue(100)
+
         self.axisItem = pg.AxisItem(
             orientation='right', linkView=self.histViewBox,
             showValues=True, maxTickLength=maxTickLength, parent=self)
+
+        self.overlayViewBox.linkView(pg.ViewBox.YAxis, self.histViewBox)
 
         # Overall layout
         self.mainLayout = QtWidgets.QGraphicsGridLayout()
@@ -117,6 +126,10 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.mainLayout.addItem(self.histViewBox, 0, 0)
         self.mainLayout.addItem(self.colorScaleViewBox, 0, 1)
         self.mainLayout.addItem(self.axisItem, 0, 2)
+        self.overlayViewBox.setParentItem(self.colorScaleViewBox.parentItem())
+
+        # Connect signals
+        self.colorScaleViewBox.geometryChanged.connect(self._updateOverlay)
 
         # It might also trigger an update when the axis is resized (but can't reproduce it
         # anymore). If needed we could test if the range has changed substantially before updating
@@ -125,6 +138,12 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         self.showHistogram(showHistogram)
         self.setImageItem(imageItem)
+
+
+    def _updateOverlay(self):
+        """ Makes the overlay the same size as the colorScaleViewBox
+        """
+        self.overlayViewBox.setGeometry(self.colorScaleViewBox.geometry())
 
 
     def getImageItem(self):
@@ -164,7 +183,7 @@ class ColorLegendItem(pg.GraphicsWidget):
     def _updateHistogram(self):
         """ Updates the histogram with data from the image
         """
-        if not self._histogramIsVisible:
+        if not self._histogramIsVisible or self._imageItem is None:
             return
 
         img = self._imageItem.image

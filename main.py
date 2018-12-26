@@ -266,7 +266,7 @@ def main():
     #     return
 
     ## Create window with ImageView widget
-    win = DemoWindow(lut=np.flipud(lut1), showHistogram=False)
+    win = DemoWindow(lut=np.flipud(lut1), showHistogram=True)
 
 
     win.setGeometry(400, 100, 700, 600)
