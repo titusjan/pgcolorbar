@@ -1,11 +1,12 @@
 """ Demo program for the pgcolorbar module
 
-    TODO
-        setHistogram(bool)
+    TODO:
         No image data
         Longer and transparent tick marks.
         Lines around color bar
+        axis label next to color bar
     Done:
+        setHistogram(bool)
         setData(array)
         setRange
         setLut(lut)

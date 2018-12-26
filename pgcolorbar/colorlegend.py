@@ -69,7 +69,7 @@ class ColorLegendItem(pg.GraphicsWidget):
     """
     sigLevelsChanged = QtCore.pyqtSignal(tuple) # TODO: use this
 
-    def __init__(self, imageItem=None, showHistogram=True):
+    def __init__(self, imageItem=None, showHistogram=True, maxTickLength=10):
         """ Constructor.
 
         """
@@ -93,9 +93,6 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.fillHistogram()
 
         # Color scale
-        self.axisItem = pg.AxisItem(
-            'right', linkView=self.histViewBox, maxTickLength=-10, parent=self)
-
         self.colorScaleViewBox = pg.ViewBox(
             enableMenu=True, border=pg.mkPen(pg.getConfigOption('foreground'), width=1.5))
 
@@ -106,6 +103,11 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         self.colorScaleImageItem = pg.ImageItem() # image data will be set in setLut
         self.colorScaleViewBox.addItem(self.colorScaleImageItem)
+
+        logger.debug("colorScaleViewBox, width {}".format(self.colorScaleViewBox.width()))
+        self.axisItem = pg.AxisItem(
+            orientation='right', linkView=self.histViewBox,
+            showValues=True, maxTickLength=maxTickLength, parent=self)
 
         # Overall layout
         self.mainLayout = QtWidgets.QGraphicsGridLayout()
