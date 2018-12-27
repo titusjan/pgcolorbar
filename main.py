@@ -279,6 +279,6 @@ def main():
 
 if __name__ == '__main__':
     LOG_FMT = '%(asctime)s %(filename)25s:%(lineno)-4d : %(levelname)-7s: pid=%(process)d: %(message)s'
-    logging.basicConfig(level='DEBUG', format=LOG_FMT)
+    logging.basicConfig(level='INFO', format=LOG_FMT)
 
     main()

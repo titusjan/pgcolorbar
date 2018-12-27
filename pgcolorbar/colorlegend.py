@@ -51,8 +51,6 @@ def isExtended(lut):
 
 
 
-
-
 class ColorLegendItem(pg.GraphicsWidget):
     """ Color legend for an image plot.
 
@@ -107,16 +105,16 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.colorScaleViewBox.addItem(self.colorScaleImageItem)
         self.colorScaleViewBox.setZValue(10)
 
-        # Overlay
+        # Overlay viewbox that will have alway have the same geometry as the colorScaleViewBox
         self.overlayViewBox = pg.ViewBox(
             enableMenu=False, border=pg.mkPen(pg.getConfigOption('foreground'), width=1))
         self.overlayViewBox.setZValue(100)
 
         self.axisItem = pg.AxisItem(
-            orientation='right', linkView=self.histViewBox,
+            orientation='right', linkView=self.overlayViewBox,
             showValues=True, maxTickLength=maxTickLength, parent=self)
 
-        self.overlayViewBox.linkView(pg.ViewBox.YAxis, self.histViewBox)
+        self.histViewBox.linkView(pg.ViewBox.YAxis, self.overlayViewBox)
 
         # Overall layout
         self.mainLayout = QtWidgets.QGraphicsGridLayout()
@@ -134,7 +132,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         # It might also trigger an update when the axis is resized (but can't reproduce it
         # anymore). If needed we could test if the range has changed substantially before updating
         # image levels.
-        self.histViewBox.sigYRangeChanged.connect(self._updateImageLevels)
+        self.overlayViewBox.sigYRangeChanged.connect(self._updateImageLevels)
 
         self.showHistogram(showHistogram)
         self.setImageItem(imageItem)
@@ -235,9 +233,9 @@ class ColorLegendItem(pg.GraphicsWidget):
         """ Gets the value range of the legend
         """
         levels = self.axisItem.range # which equals self.histViewBox.state['viewRange'][Y_AXIS]
-        assert self.axisItem.range == self.histViewBox.state['viewRange'][Y_AXIS], \
+        assert self.axisItem.range == self.overlayViewBox.state['viewRange'][Y_AXIS], \
             "Sanity check failed {} != {}".format(self.axisItem.range,
-                                       self.histViewBox.state['viewRange'][Y_AXIS])
+                                       self.overlayViewBox.state['viewRange'][Y_AXIS])
         return tuple(levels)
 
 
@@ -250,8 +248,9 @@ class ColorLegendItem(pg.GraphicsWidget):
         """
         #logger.debug("ColorLegendItem.setLevels: {}".format(levels), stack_info=False)
         lvlMin, lvlMax = levels
-        # Note: histViewBox.setYRange will call _updateImageLevels, which will emit sigLevelsChanged
-        self.histViewBox.setYRange(lvlMin, lvlMax, padding=padding)
+        # Note: overlayViewBox.setYRange will call _updateImageLevels, which will
+        # emit sigLevelsChanged
+        self.overlayViewBox.setYRange(lvlMin, lvlMax, padding=padding)
 
 
     def getLut(self):
