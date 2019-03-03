@@ -190,6 +190,7 @@ class DemoWindow(QtWidgets.QMainWindow):
         self.colorLegendItem = ColorLegendItem(
             imageItem=self.imageItem, showHistogram=showHistogram)
         self.colorLegendItem.setMinimumHeight(60)
+        #self.colorLegendItem.subsampleStep = 1
         #self.colorLegendItem.setLut(lut)
 
         self.graphicsLayoutWidget = pg.GraphicsLayoutWidget()
@@ -226,13 +227,14 @@ class DemoWindow(QtWidgets.QMainWindow):
         """ Sets image data to noise
         """
         logger.debug("_setDataToNoise")
-        ## Create random 3D data set with noisy signals
-        # img = np.random.randint(100, 150, size=(20, 400), dtype=np.uint16).astype(np.float)
-        #img = pg.gaussianFilter(np.random.normal(size=(300, 200)), (5, 5)) * 20
-        #img = np.random.normal(size=(300, 200)) * 100
+
+        img = np.random.randint(100, 150, size=(1216, 1936), dtype=np.uint16)
+        # img = pg.gaussianFilter(np.random.normal(size=(300, 200)), (5, 5)) * 20
+        # img = np.random.normal(size=(300, 200)) * 100
+
         maxVal = 1.0
-        img = np.random.uniform(0.0, 1.0, size=(300, 300)) * maxVal
-        img[200:205, :] = np.nan
+        #img = np.random.uniform(0.0, 1.0, size=(300, 300)) * maxVal
+        #img[200:205, :] = np.nan
         self.setImage(img)
 
 

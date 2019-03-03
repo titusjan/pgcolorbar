@@ -69,9 +69,18 @@ class ColorLegendItem(pg.GraphicsWidget):
     """
     sigLevelsChanged = QtCore.pyqtSignal(tuple) # TODO: use this
 
-    def __init__(self, imageItem=None, showHistogram=True, maxTickLength=10):
+    def __init__(self,
+                 imageItem=None,
+                 showHistogram=True,
+                 subSampleStep='auto',
+                 maxTickLength=10):
         """ Constructor.
 
+            :param imageItem pg.ImageItem: PyQtGraph ImageItem to which this legen will be linked
+            :param bool showHistogram: if True (the default), a histogram of image values is drawn
+            :param subSampleStep:The step size that is used to subsample the array when calculating
+                the histogram. Can be a scalar, a tuple with two elements, or 'auto'.
+            :param int maxTickLength: Maximum tick length of the color axis. Default = 10
         """
         pg.GraphicsWidget.__init__(self)
 
@@ -84,6 +93,8 @@ class ColorLegendItem(pg.GraphicsWidget):
         # List of mouse buttons that reset the color range when clicked.
         # You can safely modify this list.
         self.resetRangeMouseButtons = [QtCore.Qt.MiddleButton]
+
+        self._subsampleStep = subSampleStep
 
         # Histogram
         self.histViewBox = pg.ViewBox(enableMenu=False)
@@ -162,17 +173,17 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         # Remove old imageItem
         if self._imageItem:
-            self._imageItem.sigImageChanged.disconnect(self._onImageChanged)
+            self._imageItem.sigImageChanged.disconnect(self.onImageChanged)
 
         self._imageItem = imageItem
-        self._imageItem.sigImageChanged.connect(self._onImageChanged)
+        self._imageItem.sigImageChanged.connect(self.onImageChanged)
 
         if self._imageItem.lut is not None:
             self.setLut(self._imageItem.lut) # extents lut if necessary
-        self._onImageChanged()
+        self.onImageChanged()
 
 
-    def _onImageChanged(self):
+    def onImageChanged(self):
         """ Called when new image data has been set in the linked ImageItem
 
             Updates the histogram and colorize the image (_updateImageLevels)
@@ -180,27 +191,6 @@ class ColorLegendItem(pg.GraphicsWidget):
         logger.debug("ColorLegendItem._onImageChanged", stack_info=False)
         self._updateHistogram()
         self._updateImageLevels()
-
-
-    def _updateHistogram(self):
-        """ Updates the histogram with data from the image
-        """
-        if not self._histogramIsVisible or self._imageItem is None:
-            return
-
-        img = self._imageItem.image
-        if img is None:
-            histRange = None
-        else:
-            # Needed before PyQtGraph #699 the range was calculated with amin, amax
-            histRange = (np.nanmin(img), np.nanmax(img))
-
-        histogram = self._imageItem.getHistogram(range=histRange)
-        if histogram[0] is None:
-            logger.warning("Histogram empty in imageChanged()") # when does this happen?
-            return
-        else:
-            self.histPlotDataItem.setData(*histogram)
 
 
     @QtCore.pyqtSlot()
@@ -213,6 +203,127 @@ class ColorLegendItem(pg.GraphicsWidget):
             self._imageItem.setLevels(levels)
 
         self.sigLevelsChanged.emit(levels)
+
+
+    @property
+    def subsampleStep(self):
+        """ The step size that is used to subsample the array when calculating the histogram
+        """
+        return self._subsampleStep
+
+
+    @subsampleStep.setter
+    def subsampleStep(self, value):
+        """ The step size that is used to subsample the array when calculating the histogram
+
+            :value: can be a scalar, a tuple with two elements, or 'auto'.
+        """
+        self._subsampleStep = value
+
+
+    def _updateHistogram(self):
+        """ Updates the histogram with data from the image
+        """
+        if not self._histogramIsVisible or self._imageItem is None or self._imageItem.image is None:
+            self.histPlotDataItem.clear()
+            return
+
+        imgArr = self._imageItem.image
+        histRange = self._calcHistogramRange(imgArr, step=self.subsampleStep)
+        histBins = self._calcHistogramBins(
+            histRange, forIntegers=self._imageItemHasIntegerData(self._imageItem))
+
+        histogram = self._imageItem.getHistogram(bins=histBins, range=histRange)
+
+        if histogram[0] is None:
+            logger.warning("Histogram empty in imageChanged()") # when does this happen?
+            return
+        else:
+            self.histPlotDataItem.setData(*histogram)
+
+
+    @classmethod
+    def _calcHistogramRange(cls, imgArr, step='auto', targetImageSize=200):
+        """ Calculates bins for the histogram.
+
+            We explicitly calculate the range because in PyQtGraph 0.10.0 the histogram range is
+            calculated without taking NaNs into account (this was fixed in PyQtGraph issue #699.
+            Also it you to derive a subclasses of ColorLegendItem and override this.
+
+            This function was based on PyQtGraph.ImageItem.getHistogram() commit efaf61f
+
+            The *step* argument causes pixels to be skipped when computing the histogram to save
+            time. If *step* is 'auto', then a step is chosen such that the analyzed data has
+            dimensions roughly *targetImageSize* for each axis.
+
+            * Integer images will have approximately 500 bins,
+              with each bin having an integer width.
+            * All other types will have 500 bins.
+
+            :returns: (minRange, maxRange) tuple.
+        """
+        if imgArr is None or imgArr.size == 0:
+            return None, None
+
+        if step == 'auto':
+            step = (max(1, int(np.ceil(imgArr.shape[0] / targetImageSize))),
+                    max(1, int(np.ceil(imgArr.shape[1] / targetImageSize))))
+
+        if np.isscalar(step):
+            step = (step, step)
+
+        stepData = imgArr[::step[0], ::step[1]]
+
+        logger.debug("step: {}, stepData.shape: {}".format(step, stepData.shape))
+
+        mn = np.nanmin(stepData)
+        mx = np.nanmax(stepData)
+
+        return (mn, mx)
+
+
+    @classmethod
+    def _imageItemHasIntegerData(cls, imageItem):
+        """ Returns True if the imageItem contains integer data.
+
+            Allows use to override this.
+        """
+        check_class(imageItem, ImageItem, allowNone=True)
+
+        if imageItem is None or imageItem.image is None:
+            return False
+        else:
+            return imageItem.image.dtype.kind in "ui"
+
+
+
+    @classmethod
+    def _calcHistogramBins(cls, histRange, forIntegers=False):
+        """ Calculates bins for the histogram give a subSampled image array (stepData)
+
+            This function was based on PyQtGraph.ImageItem.getHistogram() commit efaf61f
+
+            :returns: bins for use in numpy.histogram().
+        """
+        logger.debug("histRange: {}".format(histRange))
+        mn, mx = histRange
+
+        if mn is None or np.isnan(mn) or mx is None or np.isnan(mx):
+            # the data are all-nan
+            return None, None
+
+        if forIntegers:
+            # For integer data, we select the bins carefully to avoid aliasing
+            step = np.ceil((mx-mn) / 500.)
+            bins = np.arange(mn, mx+1.01*step, step, dtype=np.int)
+        else:
+            # for float data, let numpy select the bins.
+            bins = np.linspace(mn, mx, 500)
+
+        if len(bins) == 0:
+            bins = [mn, mx]
+
+        return bins
 
 
     def mouseClickEvent(self, mouseClickEvent):
