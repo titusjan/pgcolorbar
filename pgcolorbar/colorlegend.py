@@ -75,11 +75,15 @@ class ColorLegendItem(pg.GraphicsWidget):
         """
         pg.GraphicsWidget.__init__(self)
 
-        check_class(imageItem, pg.ImageItem, allowNone=False)  # None has not yet been tested
+        check_class(imageItem, pg.ImageItem, allowNone=True)
 
         self._histogramIsVisible = showHistogram
         self.histogramWidth = 50
         self._imageItem = None
+
+        # List of mouse buttons that reset the color range when clicked.
+        # You can safely modify this list.
+        self.resetRangeMouseButtons = [QtCore.Qt.MiddleButton]
 
         # Histogram
         self.histViewBox = pg.ViewBox(enableMenu=False)
@@ -188,9 +192,8 @@ class ColorLegendItem(pg.GraphicsWidget):
         if img is None:
             histRange = None
         else:
+            # Needed before PyQtGraph #699 the range was calculated with amin, amax
             histRange = (np.nanmin(img), np.nanmax(img))
-
-        logger.debug("histRange: {}".format(histRange))
 
         histogram = self._imageItem.getHistogram(range=histRange)
         if histogram[0] is None:
@@ -210,6 +213,14 @@ class ColorLegendItem(pg.GraphicsWidget):
             self._imageItem.setLevels(levels)
 
         self.sigLevelsChanged.emit(levels)
+
+
+    def mouseClickEvent(self, mouseClickEvent):
+        """ Resets the color range if the middle mouse button is clicked.
+        """
+        if mouseClickEvent.button() in self.resetRangeMouseButtons:
+            mouseClickEvent.accept()
+            self.resetColorLevels()
 
 
     @QtCore.pyqtSlot()

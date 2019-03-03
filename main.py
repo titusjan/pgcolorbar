@@ -219,6 +219,7 @@ class DemoWindow(QtWidgets.QMainWindow):
         self.imageItem.setImage(img.T)
         nRows, nCols = img.shape
         self.plotItem.setRange(xRange=[0, nCols], yRange=[0, nRows])
+        self.colorLegendItem.resetColorLevels()
 
 
     def _setDataToNoise(self):
@@ -226,12 +227,14 @@ class DemoWindow(QtWidgets.QMainWindow):
         """
         logger.debug("_setDataToNoise")
         ## Create random 3D data set with noisy signals
+        # img = np.random.randint(100, 150, size=(20, 400), dtype=np.uint16).astype(np.float)
         #img = pg.gaussianFilter(np.random.normal(size=(300, 200)), (5, 5)) * 20
         #img = np.random.normal(size=(300, 200)) * 100
         maxVal = 1.0
         img = np.random.uniform(0.0, 1.0, size=(300, 300)) * maxVal
-        img[200:205, :] = maxVal
+        img[200:205, :] = np.nan
         self.setImage(img)
+
 
 
     def myTest(self):
@@ -279,6 +282,6 @@ def main():
 
 if __name__ == '__main__':
     LOG_FMT = '%(asctime)s %(filename)25s:%(lineno)-4d : %(levelname)-7s: pid=%(process)d: %(message)s'
-    logging.basicConfig(level='INFO', format=LOG_FMT)
+    logging.basicConfig(level='DEBUG', format=LOG_FMT)
 
     main()
