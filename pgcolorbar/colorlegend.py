@@ -3,7 +3,11 @@
     Consists of a vertical color bar with a draggable axis that displays the values of the colors.
     Optionally a histogram may be displayed.
 """
+import cProfile
 import logging
+import os
+import pstats
+
 import numpy as np
 import pyqtgraph as pg
 
@@ -19,15 +23,20 @@ X_AXIS = pg.ViewBox.XAxis
 Y_AXIS = pg.ViewBox.YAxis
 BOTH_AXES = pg.ViewBox.XYAxes
 
-
+COL_PROFILING = False
 
 def assertIsLut(lut):
-    """ Checks that lut is Nx3 array
+    """ Checks that lut is Nx3 array of dtype uint8
+
+        If dtype is not an 8 bits integer the resulting image will also not be 8 bits, but e.g.
+        32-bits. This not only costs more memory but is also significantly slower.
     """
     check_is_an_array(lut)
     assert lut.ndim == 2, "Expected 2 dimensional LUT. Got {}D".format(lut.ndim)
     assert lut.shape[1] == 3, \
         "Second dimension of LUT should be length 3. Got: {}".format(lut.shape[1])
+    assert lut.dtype == np.uint8, \
+        "LUT should have dtype np.uint8, got {}".format(lut.dtype)
 
 
 def extentLut(lut):
@@ -72,19 +81,26 @@ class ColorLegendItem(pg.GraphicsWidget):
     def __init__(self,
                  imageItem=None,
                  showHistogram=True,
-                 subSampleStep='auto',
+                 subsampleStep='auto',
                  maxTickLength=10):
         """ Constructor.
 
             :param imageItem pg.ImageItem: PyQtGraph ImageItem to which this legen will be linked
             :param bool showHistogram: if True (the default), a histogram of image values is drawn
-            :param subSampleStep:The step size that is used to subsample the array when calculating
+            :param subsampleStep:The step size that is used to subsample the array when calculating
                 the histogram. Can be a scalar, a tuple with two elements, or 'auto'.
             :param int maxTickLength: Maximum tick length of the color axis. Default = 10
         """
         pg.GraphicsWidget.__init__(self)
 
         check_class(imageItem, pg.ImageItem, allowNone=True)
+
+        if COL_PROFILING:
+            # Profiler that measures the drawing of the inspectors.
+            self._profFileName = "col_legend.prof"
+
+            logger.warning("Profiling is on for {}. This may cost a bit of CPU time.")
+            self._profiler = cProfile.Profile()
 
         self._histogramIsVisible = showHistogram
         self.histogramWidth = 50
@@ -94,7 +110,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         # You can safely modify this list.
         self.resetRangeMouseButtons = [QtCore.Qt.MiddleButton]
 
-        self._subsampleStep = subSampleStep
+        self._subsampleStep = subsampleStep
 
         # Histogram
         self.histViewBox = pg.ViewBox(enableMenu=False)
@@ -153,6 +169,13 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.setImageItem(imageItem)
 
 
+    def finalize(self):
+        if COL_PROFILING:
+            logger.info("Saving profiling information to {}"
+                        .format(os.path.abspath(self._profFileName)))
+            profStats = pstats.Stats(self._profiler)
+            profStats.dump_stats(self._profFileName)
+
     def _updateOverlay(self):
         """ Makes the overlay the same size as the colorScaleViewBox
         """
@@ -197,12 +220,17 @@ class ColorLegendItem(pg.GraphicsWidget):
     def _updateImageLevels(self):
         """ Updates the image levels from the color levels of the
         """
+        if COL_PROFILING:
+            self._profiler.enable()
         levels = self.getLevels()
-        #logger.debug("updateImageToNewLevels: {}".format(levels), stack_info=False)
+        logger.info("---------updateImageToNewLevels: {}".format(levels), stack_info=False)
         if self._imageItem is not None:
             self._imageItem.setLevels(levels)
 
         self.sigLevelsChanged.emit(levels)
+
+        if COL_PROFILING:
+            self._profiler.enable()
 
 
     @property
@@ -230,6 +258,7 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         imgArr = self._imageItem.image
         histRange = self._calcHistogramRange(imgArr, step=self.subsampleStep)
+
         histBins = self._calcHistogramBins(
             histRange, forIntegers=self._imageItemHasIntegerData(self._imageItem))
 
@@ -298,14 +327,13 @@ class ColorLegendItem(pg.GraphicsWidget):
 
 
     @classmethod
-    def _calcHistogramBins(cls, histRange, forIntegers=False):
-        """ Calculates bins for the histogram give a subSampled image array (stepData)
+    def _calcHistogramBins(cls, histRange, numBins=500, forIntegers=False):
+        """ Calculates bins for the histogram give a subsampled image array (stepData)
 
             This function was based on PyQtGraph.ImageItem.getHistogram() commit efaf61f
 
             :returns: bins for use in numpy.histogram().
         """
-        logger.debug("histRange: {}".format(histRange))
         mn, mx = histRange
 
         if mn is None or np.isnan(mn) or mx is None or np.isnan(mx):
@@ -314,11 +342,11 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         if forIntegers:
             # For integer data, we select the bins carefully to avoid aliasing
-            step = np.ceil((mx-mn) / 500.)
+            step = np.ceil((mx-mn) / float(numBins))
             bins = np.arange(mn, mx+1.01*step, step, dtype=np.int)
         else:
             # for float data, let numpy select the bins.
-            bins = np.linspace(mn, mx, 500)
+            bins = np.linspace(mn, mx, numBins)
 
         if len(bins) == 0:
             bins = [mn, mx]
@@ -387,10 +415,7 @@ class ColorLegendItem(pg.GraphicsWidget):
             :param ndarray Array: an N x 3 array.
         """
         logger.debug("------ setLut called")
-        check_is_an_array(lut)
-        assert lut.ndim == 2, "Expected 2 dimensional LUT. Got {}D".format(lut.ndim)
-        assert lut.shape[1] == 3, \
-            "Second dimension of LUT should be length 3. Got: {}".format(lut.shape[1])
+        assertIsLut(lut)
 
         if not isExtended(lut):
             # The lookup table in the imageItem must be extended. See extentLut doc string
