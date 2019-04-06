@@ -80,12 +80,14 @@ class ColorLegendItem(pg.GraphicsWidget):
 
     def __init__(self,
                  imageItem=None,
+                 label=None,
                  showHistogram=True,
                  subsampleStep='auto',
                  maxTickLength=10):
         """ Constructor.
 
             :param imageItem pg.ImageItem: PyQtGraph ImageItem to which this legen will be linked
+            :param Optonal[str] label: text to show next to the axis
             :param bool showHistogram: if True (the default), a histogram of image values is drawn
             :param subsampleStep:The step size that is used to subsample the array when calculating
                 the histogram. Can be a scalar, a tuple with two elements, or 'auto'.
@@ -144,7 +146,6 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.axisItem = pg.AxisItem(
             orientation='right', linkView=self.overlayViewBox,
             showValues=True, maxTickLength=maxTickLength, parent=self)
-
         self.histViewBox.linkView(pg.ViewBox.YAxis, self.overlayViewBox)
 
         # Overall layout
@@ -165,6 +166,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         # image levels.
         self.overlayViewBox.sigYRangeChanged.connect(self._updateImageLevels)
 
+        self.setLabel(label)
         self.showHistogram(showHistogram)
         self.setImageItem(imageItem)
 
@@ -360,6 +362,21 @@ class ColorLegendItem(pg.GraphicsWidget):
         if mouseClickEvent.button() in self.resetRangeMouseButtons:
             mouseClickEvent.accept()
             self.resetColorLevels()
+
+
+    def getLabel(self):
+        """ Returns the axis label. Returns None if no label present.
+        """
+        return self.axisItem.labelText
+
+
+    def setLabel(self, text):
+        """ Sets the axis label.
+
+            Use None for no label (an empty string will take the screen space).
+        """
+        self.axisItem.setLabel(text)
+        self.axisItem.showLabel(text is not None) # Is not done in axisItem.setLabel when None
 
 
     @QtCore.pyqtSlot()

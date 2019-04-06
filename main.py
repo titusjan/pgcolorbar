@@ -188,7 +188,9 @@ class DemoWindow(QtWidgets.QMainWindow):
         self.plotItem.addItem(self.imageItem)
 
         self.colorLegendItem = ColorLegendItem(
-            imageItem=self.imageItem, showHistogram=showHistogram)
+            imageItem=self.imageItem, showHistogram=showHistogram, label=None)
+        self.colorLegendItem.setLabel('hello')
+        self.colorLegendItem.setLabel(None)
         self.colorLegendItem.setMinimumHeight(60)
         #self.colorLegendItem.subsampleStep = 1
         #self.colorLegendItem.setLut(lut)
@@ -238,7 +240,6 @@ class DemoWindow(QtWidgets.QMainWindow):
         self.setImage(img)
 
 
-
     def myTest(self):
 
         logger.info("myTest called")
@@ -271,7 +272,7 @@ def main():
     #     return
 
     ## Create window with ImageView widget
-    win = DemoWindow(lut=np.flipud(lut1), showHistogram=True)
+    win = DemoWindow(lut=np.flipud(lut1.astype(np.uint8)), showHistogram=True)
 
 
     win.setGeometry(400, 100, 700, 600)
