@@ -76,19 +76,25 @@ class ColorLegendItem(pg.GraphicsWidget):
         lut with ColorLegendItem.setLut, which adds this duplicate item (if not yet done). This
         class therefore has a side effect.
     """
-    sigLevelsChanged = QtCore.pyqtSignal(tuple) # TODO: use this
+    sigLevelsChanged = QtCore.pyqtSignal(tuple)
 
     def __init__(self,
                  imageItem=None,
                  label=None,
                  showHistogram=True,
                  subsampleStep='auto',
+                 histHeightPercentile = 99.0,
                  maxTickLength=10):
         """ Constructor.
 
             :param imageItem pg.ImageItem: PyQtGraph ImageItem to which this legen will be linked
             :param Optonal[str] label: text to show next to the axis
             :param bool showHistogram: if True (the default), a histogram of image values is drawn
+            :param float histHeightPercentile: Only use this percentil when scaling the histogram
+                height. Often an image has one color that occurs very often and this then will
+                completely dominate the histogram. By discarding this color when scaling the
+                histogram the other color occurrences will become visible. By default we use the
+                99 percentile, meaning the 1% of the bins with the highest values will be discarded.
             :param subsampleStep:The step size that is used to subsample the array when calculating
                 the histogram. Can be a scalar, a tuple with two elements, or 'auto'.
             :param int maxTickLength: Maximum tick length of the color axis. Default = 10
@@ -104,6 +110,7 @@ class ColorLegendItem(pg.GraphicsWidget):
             logger.warning("Profiling is on for {}. This may cost a bit of CPU time.")
             self._profiler = cProfile.Profile()
 
+        self.histHeightPercentile = histHeightPercentile
         self._histogramIsVisible = showHistogram
         self.histogramWidth = 50
         self._imageItem = None
@@ -116,7 +123,7 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         # Histogram
         self.histViewBox = pg.ViewBox(enableMenu=False)
-        self.histViewBox.disableAutoRange(pg.ViewBox.YAxis)
+        self.histViewBox.disableAutoRange(BOTH_AXES)
         self.histViewBox.setMouseEnabled(x=False, y=True)
         self.histViewBox.setFixedWidth(self.histogramWidth)
 
@@ -213,7 +220,6 @@ class ColorLegendItem(pg.GraphicsWidget):
 
             Updates the histogram and colorize the image (_updateImageLevels)
         """
-        logger.debug("ColorLegendItem._onImageChanged", stack_info=False)
         self._updateHistogram()
         self._updateImageLevels()
 
@@ -225,7 +231,6 @@ class ColorLegendItem(pg.GraphicsWidget):
         if COL_PROFILING:
             self._profiler.enable()
         levels = self.getLevels()
-        logger.info("---------updateImageToNewLevels: {}".format(levels), stack_info=False)
         if self._imageItem is not None:
             self._imageItem.setLevels(levels)
 
@@ -258,19 +263,29 @@ class ColorLegendItem(pg.GraphicsWidget):
             self.histPlotDataItem.clear()
             return
 
-        imgArr = self._imageItem.image
-        histRange = self._calcHistogramRange(imgArr, step=self.subsampleStep)
+        try:
+            imgArr = self._imageItem.image
+            histRange = self._calcHistogramRange(imgArr, step=self.subsampleStep)
 
-        histBins = self._calcHistogramBins(
-            histRange, forIntegers=self._imageItemHasIntegerData(self._imageItem))
+            histBins = self._calcHistogramBins(
+                histRange, forIntegers=self._imageItemHasIntegerData(self._imageItem))
 
-        histogram = self._imageItem.getHistogram(bins=histBins, range=histRange)
+            histogram = self._imageItem.getHistogram(bins=histBins, range=histRange)
 
-        if histogram[0] is None:
-            logger.warning("Histogram empty in imageChanged()") # when does this happen?
-            return
+            assert histogram[0] is not None, "Histogram empty in imageChanged()" # when does this happen again?
+
+        except Exception as ex:
+            logger.warning("Unable to calculate histogram: {}".format(ex))
+            self.histPlotDataItem.clear()
         else:
             self.histPlotDataItem.setData(*histogram)
+
+            # Discard outliers when setting the histogram height so one dominant color in the
+            # image doesn't make the other colors occurences unreadable.
+            histValues = histogram[1]
+            histYrange = np.percentile(histValues, (self.histHeightPercentile, ))[0]
+            self.histViewBox.setRange(xRange=(-histYrange, 0), padding=None)
+
 
 
     @classmethod
@@ -345,6 +360,8 @@ class ColorLegendItem(pg.GraphicsWidget):
         if forIntegers:
             # For integer data, we select the bins carefully to avoid aliasing
             step = np.ceil((mx-mn) / float(numBins))
+            logger.debug("mn {}, mx {}, step {}, mx+1.01*step = {}"
+                         .format(mn, mx, step, mx+1.01*step))
             bins = np.arange(mn, mx+1.01*step, step, dtype=np.int)
         else:
             # for float data, let numpy select the bins.
