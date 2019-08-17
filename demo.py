@@ -129,7 +129,6 @@ class DemoWindow(QtWidgets.QMainWindow):
         self.imgLevelsConfigWidget.toggleHistogramAction.setChecked(showHistogram)
 
 
-
     def _setupActions(self):
         """ Creates the UI actions.
         """
@@ -181,13 +180,10 @@ class DemoWindow(QtWidgets.QMainWindow):
         self.colorLegendItem.setLabel('hello')
         self.colorLegendItem.setLabel(None)
         self.colorLegendItem.setMinimumHeight(60)
-        #self.colorLegendItem.subsampleStep = 1
-        #self.colorLegendItem.setLut(lut)
 
         self.graphicsLayoutWidget = pg.GraphicsLayoutWidget()
         self.graphicsLayoutWidget.addItem(self.plotItem, 0, 0)
         self.graphicsLayoutWidget.addItem(self.colorLegendItem, 0, 1)
-
         self.mainLayout.addWidget(self.graphicsLayoutWidget)
 
         # Toolbar
@@ -240,36 +236,19 @@ def main():
 
     app = QtWidgets.QApplication([])
 
-    #cmap = pg.ColorMap([0, 0.25, 0.75, 1], [[0, 0, 0, 255], [255, 0, 0, 255], [255, 255, 0, 255], [255, 255, 255, 255]])
-    #lut0 = cmap.getLookupTable()
+    cmap = pg.ColorMap([0, 0.25, 0.75, 1], [[0, 0, 0, 255], [255, 0, 0, 255], [255, 255, 0, 255], [255, 255, 255, 255]])
+    lut0 = cmap.getLookupTable()
     lut1 = np.array([(237,248,251), (178,226,226), (102,194,164), (35,139,69), (0, 0, 0)])
     lut2 = np.array([(237,248,251), (204,236,230), (153,216,201), (102,194,164),
                      (65,174,118), (35,139,69), (0,88,36)])
 
-    # if 0:
-    #     lut1 = np.array([(0, 0, 0), (1, 1, 1), (2, 2, 2), (3, 3, 3)])
-    #     data = np.array([[0.0, 0.25], [0.9999, 1.0]])
-    #     logger.debug("data: {}".format(data.shape))
-    #
-    #     res, hasAlpha = pg.makeARGB(data, lut1, levels=(0, 1), scale=3)
-    #
-    #     logger.debug("scale=3, res (shape={}): \n{}".format(res.shape, res))
-    #
-    #     res, hasAlpha = pg.makeARGB(data, lut1, levels=(0, 1), scale=4)
-    #     logger.debug("scale=4, res (shape={}): \n{}".format(res.shape, res))
-    #
-    #     return
-
-    ## Create window with ImageView widget
-    win = DemoWindow(lut=np.flipud(lut1.astype(np.uint8)), showHistogram=True)
-
-
+    lut = lut1.astype(np.uint8) # Use uint8 so that the resulting image will also be of that type/
+    lut = np.flipud(lut) # test reversed map
+    win = DemoWindow(lut=lut, showHistogram=True)
     win.setGeometry(400, 100, 700, 600)
     win.setWindowTitle('pyqtgraph example: ImageView')
     win.show()
-
-
-    QtWidgets.QApplication.instance().exec_()
+    app.exec_()
 
 
 if __name__ == '__main__':
