@@ -215,8 +215,8 @@ class DemoWindow(QtWidgets.QMainWindow):
         """
         logger.debug("_setDataToNoise")
 
-        img = np.random.randint(100, 150, size=(1216, 1936), dtype=np.uint16)
-        # img = pg.gaussianFilter(np.random.normal(size=(300, 200)), (5, 5)) * 20
+        #img = np.random.randint(100, 150, size=(1216, 1936), dtype=np.uint16)
+        img = pg.gaussianFilter(np.random.normal(size=(300, 200)), (5, 5)) * 20
         # img = np.random.normal(size=(300, 200)) * 100
 
         maxVal = 1.0
@@ -236,6 +236,7 @@ def main():
 
     app = QtWidgets.QApplication([])
 
+  
     cmap = pg.ColorMap([0, 0.25, 0.75, 1], [[0, 0, 0, 255], [255, 0, 0, 255], [255, 255, 0, 255], [255, 255, 255, 255]])
     lut0 = cmap.getLookupTable()
     lut1 = np.array([(237,248,251), (178,226,226), (102,194,164), (35,139,69), (0, 0, 0)])
@@ -246,7 +247,7 @@ def main():
     lut = np.flipud(lut) # test reversed map
     win = DemoWindow(lut=lut, showHistogram=True)
     win.setGeometry(400, 100, 700, 600)
-    win.setWindowTitle('pyqtgraph example: ImageView')
+    win.setWindowTitle('PgColorbar Demo')
     win.show()
     app.exec_()
 

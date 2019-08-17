@@ -2,6 +2,9 @@
 """
 import numpy as np
 
+# Put here so we can import it in the rest of the library
+__version__ = "1.0.0rc1"
+
 def is_an_array(var, allow_none=False):
     """ Returns True if var is a numpy array.
     """
