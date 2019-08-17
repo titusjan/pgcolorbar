@@ -11,7 +11,7 @@ import pstats
 import numpy as np
 import pyqtgraph as pg
 
-from pyqtgraph.Qt import QtWidgets, QtCore
+from .bindings import QtWidgets, QtCore
 from pyqtgraph import ImageItem
 
 
@@ -76,7 +76,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         lut with ColorLegendItem.setLut, which adds this duplicate item (if not yet done). This
         class therefore has a side effect.
     """
-    sigLevelsChanged = QtCore.pyqtSignal(tuple)
+    sigLevelsChanged = QtCore.Signal(tuple)
 
     def __init__(self,
                  imageItem=None,
@@ -224,7 +224,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         self._updateImageLevels()
 
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def _updateImageLevels(self):
         """ Updates the image levels from the color levels of the
         """
@@ -396,7 +396,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.axisItem.showLabel(text is not None) # Is not done in axisItem.setLabel when None
 
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def resetColorLevels(self):
         """ Sets the color levels from the min and max of the image
         """
