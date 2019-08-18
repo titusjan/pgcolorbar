@@ -218,12 +218,12 @@ class DemoWindow(QtWidgets.QMainWindow):
         logger.debug("_setDataToNoise")
 
         #img = np.random.randint(100, 150, size=(1216, 1936), dtype=np.uint16)
-        img = pg.gaussianFilter(np.random.normal(size=(300, 200)), (5, 5)) * 20
+        #img = pg.gaussianFilter(np.random.normal(size=(300, 200)), (5, 5)) * 20
         # img = np.random.normal(size=(300, 200)) * 100
 
         maxVal = 1.0
-        #img = np.random.uniform(0.0, 1.0, size=(300, 300)) * maxVal
-        #img[200:205, :] = np.nan
+        img = np.random.uniform(0.0, 1.0, size=(300, 300)) * maxVal
+        img[200:205, :] = maxVal
         self.setImage(img)
 
 

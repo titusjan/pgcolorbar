@@ -12,6 +12,7 @@ import numpy as np
 import pyqtgraph as pg
 
 from .bindings import QtWidgets, QtCore
+from .misc import versionStrToTuple
 from pyqtgraph import ImageItem
 
 
@@ -45,6 +46,7 @@ def extentLut(lut):
         This is necessary because the pyqtgraph.makeARGB function has a wrong default scale. It
         should be equal to the length of the LUT, but it's set to len(lut)-1. We therefore add a
         fake LUT entry. See issue 792 of PyQtGraph.
+        It has been fixed in PyQtGraph 1.11.0
     """
     assertIsLut(lut)
     extendedLut = np.append(lut, [lut[-1, :]], axis=0)
@@ -451,16 +453,20 @@ class ColorLegendItem(pg.GraphicsWidget):
         logger.debug("------ setLut called")
         assertIsLut(lut)
 
-        if not isExtended(lut):
-            # The lookup table in the imageItem must be extended. See extentLut doc string
-            logger.debug("Side effect: duplicating last item of LUT in image item.")
-            extendedLut = extentLut(lut)
-        else:
-            # The lookup table in the imageItem already is extended. Draw the original
-            extendedLut = lut
-            lut = np.copy(lut[0:-1, :])
+        pgVersionInfo = versionStrToTuple(pg.__version__)
+        if pgVersionInfo < (0, 11):
+            if not isExtended(lut):
+                # The lookup table in the imageItem must be extended. See extentLut doc string
+                logger.debug("Side effect: duplicating last item of LUT in image item.")
+                extendedLut = extentLut(lut)
+            else:
+                # The lookup table in the imageItem already is extended. Draw the original
+                extendedLut = lut
+                lut = np.copy(lut[0:-1, :])
 
-        assert len(lut) == len(extendedLut) - 1, "Sanity check"
+            assert len(lut) == len(extendedLut) - 1, "Sanity check"
+        else:
+            extendedLut = lut
 
         if self._imageItem:
             logger.debug("Setting image item to extended lut")

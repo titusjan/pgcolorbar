@@ -5,6 +5,21 @@ import numpy as np
 # Put here so we can import it in the rest of the library
 __version__ = "1.0.0rc1"
 
+
+def versionStrToTuple(versionStr):
+    """ Converts a version string to tuple
+
+        E.g. 'x.y.z' to (x, y, x)
+    """
+    versionInfo = []
+    for elem in versionStr.split('.'):
+        try:
+            versionInfo.append(int(elem))
+        except:
+            versionInfo.append(elem)
+    return tuple(versionInfo)
+
+
 def is_an_array(var, allow_none=False):
     """ Returns True if var is a numpy array.
     """
