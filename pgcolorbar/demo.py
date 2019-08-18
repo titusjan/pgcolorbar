@@ -2,9 +2,11 @@
 """
 
 import logging
-import numpy as np
+import sys
 
+import numpy as np
 import pyqtgraph as pg
+
 from pgcolorbar.bindings import QtWidgets, QtCore
 from pgcolorbar.colorlegend import ColorLegendItem
 
@@ -234,9 +236,14 @@ class DemoWindow(QtWidgets.QMainWindow):
 
 def main():
 
+    logger.info("Python executable: {}".format(sys.executable))
+    logger.info("Python version: {}".format(sys.version))
+    logger.info("PyQt bindings: {}".format(pg.QT_LIB))
+    logger.info("PyQtGraph version: {}".format(pg.__version__))
+
     app = QtWidgets.QApplication([])
 
-  
+
     cmap = pg.ColorMap([0, 0.25, 0.75, 1], [[0, 0, 0, 255], [255, 0, 0, 255], [255, 255, 0, 255], [255, 255, 255, 255]])
     lut0 = cmap.getLookupTable()
     lut1 = np.array([(237,248,251), (178,226,226), (102,194,164), (35,139,69), (0, 0, 0)])

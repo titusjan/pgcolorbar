@@ -423,7 +423,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         return tuple(levels)
 
 
-    @QtCore.pyqtSlot(tuple)
+    @QtCore.Slot(tuple)
     def setLevels(self, levels, padding=0.0):
         """ Sets the value range of the legend.
 
@@ -498,7 +498,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         return self._histogramIsVisible
 
 
-    @QtCore.pyqtSlot(bool)
+    @QtCore.Slot(bool)
     def showHistogram(self, show):
         """ Toggle histogram on or off.
         """
