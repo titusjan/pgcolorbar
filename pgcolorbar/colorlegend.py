@@ -3,6 +3,8 @@
     Consists of a vertical color bar with a draggable axis that displays the values of the colors.
     Optionally a histogram may be displayed.
 """
+from __future__ import print_function, division
+
 import cProfile
 import logging
 import os

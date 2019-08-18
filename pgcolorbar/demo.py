@@ -1,5 +1,6 @@
 """ Demo program for the pgcolorbar module
 """
+from __future__ import print_function, division
 
 import logging
 import sys
@@ -19,7 +20,7 @@ class ImageLevelsConfigWidget(QtWidgets.QWidget):
     def __init__(self, colorLegendItem, label=None, parent=None):
         """ Constructor
         """
-        super().__init__(parent=parent)
+        super(ImageLevelsConfigWidget, self).__init__(parent=parent)
 
         self.colorLegendItem = colorLegendItem
 
@@ -80,7 +81,7 @@ class ImageLevelsConfigWidget(QtWidgets.QWidget):
         """ Should be called manually before object deletion
         """
         logger.debug("Finalizing: {}".format(self))
-        super().finalize()
+        super(ImageLevelsConfigWidget, self).finalize()
 
 
     def setLevels(self, levels):
@@ -121,7 +122,7 @@ class ImageLevelsConfigWidget(QtWidgets.QWidget):
 class DemoWindow(QtWidgets.QMainWindow):
 
     def __init__(self, lut, showHistogram, parent=None):
-        super().__init__(parent=parent)
+        super(DemoWindow, self).__init__(parent=parent)
 
         self._setupActions()
         self._setupMenus()
@@ -217,13 +218,15 @@ class DemoWindow(QtWidgets.QMainWindow):
         """
         logger.debug("_setDataToNoise")
 
-        #img = np.random.randint(100, 150, size=(1216, 1936), dtype=np.uint16)
-        #img = pg.gaussianFilter(np.random.normal(size=(300, 200)), (5, 5)) * 20
+        # img = np.random.randint(100, 150, size=(1216, 1936), dtype=np.uint16)
+        img = pg.gaussianFilter(np.random.normal(size=(300, 200)), (5, 5)) * 20
         # img = np.random.normal(size=(300, 200)) * 100
 
-        maxVal = 1.0
-        img = np.random.uniform(0.0, 1.0, size=(300, 300)) * maxVal
-        img[200:205, :] = maxVal
+        # For testing issue 792
+        # maxVal = 1.0
+        # img = np.random.uniform(0.0, 1.0, size=(300, 300)) * maxVal
+        # img[200:205, :] = maxVal
+
         self.setImage(img)
 
 

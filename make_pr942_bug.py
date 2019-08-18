@@ -12,7 +12,7 @@ from PyQt5.Qt import PYQT_VERSION_STR
 class DemoWindow(QtWidgets.QMainWindow):
 
     def __init__(self, parent=None):
-        super().__init__(parent=parent)
+        super(DemoWindow, self).__init__(parent=parent)
 
         self.mainWidget = QtWidgets.QWidget()
         self.setCentralWidget(self.mainWidget)

@@ -1,5 +1,7 @@
 """ Miscellaneous routines
 """
+from __future__ import print_function, division
+
 import numpy as np
 
 # Put here so we can import it in the rest of the library
