@@ -2,10 +2,44 @@
 """
 from __future__ import print_function, division
 
+import logging
+import os.path
+import sys
+
 import numpy as np
 
-# Put here so we can import it in the rest of the library
-__version__ = "1.0.0rc1"
+
+DEBUGGING = False
+LOG_FMT = '%(asctime)s %(filename)25s:%(lineno)-4d : %(levelname)-7s: %(message)s'
+
+logger = logging.getLogger(__name__)
+
+
+
+# Reads the version of the program from the first line of version.txt
+try:
+    if getattr(sys, 'frozen', False):
+        # If the application is run as a bundle, the pyInstaller bootloader
+        # extends the sys module by a flag frozen=True and sets the app
+        # path into variable _MEIPASS'.
+        MODULE_DIR = os.path.join(sys._MEIPASS, 'cmlib')
+        if DEBUGGING:
+            print("Module dir from meipass: {}".format(MODULE_DIR), file=sys.stderr)
+    else:
+        MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+        if DEBUGGING:
+            print("Module dir from __file__: {}".format(MODULE_DIR), file=sys.stderr)
+
+    VERSION_FILE = os.path.join(MODULE_DIR, 'version.txt')
+    if DEBUGGING:
+        print("Reading version from: {}".format(VERSION_FILE), file=sys.stderr)
+    logger.debug("Reading version from: {}".format(VERSION_FILE))
+    with open(VERSION_FILE) as stream:
+        __version__ = stream.readline().strip()
+except Exception as ex:
+    __version__ = "?.?.?"
+    logger.error("Unable to read version number: {}".format(ex))
+    raise
 
 
 def versionStrToTuple(versionStr):

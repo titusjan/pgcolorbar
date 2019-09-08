@@ -241,7 +241,7 @@ def main():
 
     logger.info("Python executable: {}".format(sys.executable))
     logger.info("Python version: {}".format(sys.version))
-    logger.info("PyQt bindings: {}".format(pg.QT_LIB))
+    logger.info("PyQt bindings: {}".format(pg.Qt.QT_LIB))
     logger.info("PyQtGraph version: {}".format(pg.__version__))
 
     app = QtWidgets.QApplication([])
