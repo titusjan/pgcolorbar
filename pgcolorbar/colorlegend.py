@@ -137,7 +137,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.histViewBox.addItem(self.histPlotDataItem)
         self.fillHistogram()
 
-        # Color scale
+        # Color scale. Viewbox ranges from 0 to number of colors
         self.colorScaleViewBox = pg.ViewBox(enableMenu=False, border=None)
 
         self.colorScaleViewBox.disableAutoRange(pg.ViewBox.XYAxes)
@@ -149,11 +149,13 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.colorScaleViewBox.addItem(self.colorScaleImageItem)
         self.colorScaleViewBox.setZValue(10)
 
-        # Overlay viewbox that will have alway have the same geometry as the colorScaleViewBox
+        # Overlay viewbox that will have always have the same geometry as the colorScaleViewBox.
+        # The histograms and axis item are linked to this viewbox
         self.overlayViewBox = pg.ViewBox(
             enableMenu=False, border=pg.mkPen(pg.getConfigOption('foreground'), width=1))
         self.overlayViewBox.setZValue(100)
 
+        # Axis that shows the ticks and values
         self.axisItem = pg.AxisItem(
             orientation='right', linkView=self.overlayViewBox,
             showValues=True, maxTickLength=maxTickLength, parent=self)
@@ -298,7 +300,7 @@ class ColorLegendItem(pg.GraphicsWidget):
 
             We explicitly calculate the range because in PyQtGraph 0.10.0 the histogram range is
             calculated without taking NaNs into account (this was fixed in PyQtGraph issue #699.
-            Also it you to derive a subclasses of ColorLegendItem and override this.
+            Also it allows you to derive a subclasses of ColorLegendItem and override this.
 
             This function was based on PyQtGraph.ImageItem.getHistogram() commit efaf61f
 
@@ -336,7 +338,7 @@ class ColorLegendItem(pg.GraphicsWidget):
     def _imageItemHasIntegerData(cls, imageItem):
         """ Returns True if the imageItem contains integer data.
 
-            Allows use to override this.
+            Allows users to override this.
         """
         check_class(imageItem, ImageItem, allowNone=True)
 
