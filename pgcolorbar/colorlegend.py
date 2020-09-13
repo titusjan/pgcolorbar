@@ -63,6 +63,39 @@ def isExtended(lut):
     return np.array_equal(lut[-1, :], lut[-2, :])
 
 
+# Gebruik isFinish om de region weer aan het einde te zetten
+#
+# Gebruik isFinish om een modifier te onthouden
+
+class MyViewBox(pg.ViewBox):
+    """ Viewbox that overrides some keypress and mouse events
+    """
+    def init(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.dragModifiers = None
+
+    def mouseDragEvent(self, event, axis=None):
+        """ Called in case of a pyqtgraph.GraphicsScene.mouseEvents.MouseDragEvent
+        """
+        #logger.info("mouseDragEvent: button {} {}".format(ev.button(), ev.modifiers()))
+
+        # logger.info("mouseDragEvent: button {} {}"
+        #             .format(event.modifiers(), event.isFinish()))
+        # if ev._button == 4:
+        #     ev._button = 2
+
+        # if shift in event.modifiers():
+        #     filter out event and set levels manually
+
+        if event.isFinish:
+            self.dragModifiers = None
+        else:
+            self.dragModifiers = event.modifiers
+        super().mouseDragEvent(event, axis=axis)
+
+
+
 
 class ColorLegendItem(pg.GraphicsWidget):
     """ Color legend for an image plot.
@@ -151,7 +184,7 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         # Overlay viewbox that will have always have the same geometry as the colorScaleViewBox.
         # The histograms and axis item are linked to this viewbox
-        self.overlayViewBox = pg.ViewBox(
+        self.overlayViewBox = MyViewBox(
             enableMenu=False, border=pg.mkPen(pg.getConfigOption('foreground'), width=1))
         self.overlayViewBox.setZValue(100)
 
@@ -160,6 +193,13 @@ class ColorLegendItem(pg.GraphicsWidget):
             orientation='right', linkView=self.overlayViewBox,
             showValues=True, maxTickLength=maxTickLength, parent=self)
         self.histViewBox.linkView(pg.ViewBox.YAxis, self.overlayViewBox)
+
+        self.edgeRegion = pg.LinearRegionItem(orientation='horizontal', swapMode='block')
+        self.edgeRegion.setZValue(150)
+        #self.overlayViewBox.addItem(self.edgeRegion)
+        self.colorScaleViewBox.addItem(self.edgeRegion)
+        # #self.edgeRegion.hide()
+        #
 
         # Overall layout
         self.mainLayout = QtWidgets.QGraphicsGridLayout()
@@ -178,6 +218,9 @@ class ColorLegendItem(pg.GraphicsWidget):
         # anymore). If needed we could test if the range has changed substantially before updating
         # image levels.
         self.overlayViewBox.sigYRangeChanged.connect(self._updateImageLevels)
+
+        self.edgeRegion.sigRegionChanged.connect(self._onEdgeRegionChanged)
+        #self.edgeRegion.sigRegionChangeFinished.connect()
 
         self.setLabel(label)
         self.showHistogram(showHistogram)
@@ -500,6 +543,10 @@ class ColorLegendItem(pg.GraphicsWidget):
             xRange=[0, barWidth], yRange=yRange, padding=0.0,
             update=False, disableAutoRange=False)
 
+        # Set the edgeRegion to the egdes of the look up table
+
+        self.edgeRegion.setRegion([0.25, len(lut)-0.25])
+
 
     @property
     def histogramIsVisible(self):
@@ -531,3 +578,25 @@ class ColorLegendItem(pg.GraphicsWidget):
             self.histPlotDataItem.setFillBrush(color)
         else:
             self.histPlotDataItem.setFillLevel(None)
+
+
+    @QtCore.Slot()
+    def _onEdgeRegionChanged(self):
+        """ Called when the user drags the LUT by one of the edge selectors.
+
+            Will update the LUT range at one edge while keeping the other side fixed.
+        """
+        if self.getLut() is None:
+            logger.debug("Can't extend LUT edges when no LUT is defined.")
+            return
+
+        lutMin, lutMax = 0, len(self.getLut())
+        lutLen = abs(lutMax - lutMin)
+        regMin, regMax = self.edgeRegion.getRegion()
+
+        extMin = (regMin - lutMin)
+        extMax = (regMax - lutMax)
+
+        logger.debug("_onRangeEdgeChanged abs = ({:.2f} {:.2f}), rel = ({:.2f} {:.2f})"
+                     .format(extMin, extMax, extMin / lutLen, extMax / lutLen))
+

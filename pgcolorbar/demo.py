@@ -12,7 +12,7 @@ from pgcolorbar.bindings import QtWidgets, QtCore
 from pgcolorbar.colorlegend import ColorLegendItem
 
 logger = logging.getLogger(__name__)
-
+logger.setLevel('INFO')
 
 class ImageLevelsConfigWidget(QtWidgets.QWidget):
     """ Config widget with two spinboxes that control the image levels.
@@ -263,7 +263,7 @@ def main():
 
 
 if __name__ == '__main__':
-    LOG_FMT = '%(asctime)s %(filename)25s:%(lineno)-4d : %(levelname)-7s: %(message)s'
+    LOG_FMT = '%(asctime)s %(filename)20s:%(lineno)-4d : %(levelname)-7s: %(message)s'
     logging.basicConfig(level='DEBUG', format=LOG_FMT)
 
     main()
