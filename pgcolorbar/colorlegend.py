@@ -594,9 +594,15 @@ class ColorLegendItem(pg.GraphicsWidget):
         lutLen = abs(lutMax - lutMin)
         regMin, regMax = self.edgeRegion.getRegion()
 
-        extMin = (regMin - lutMin)
-        extMax = (regMax - lutMax)
+        extMin = (regMin - lutMin) / lutLen  # minimum is extended by this factor
+        extMax = (regMax - lutMax) / lutLen  # maximum is extended by this factor
 
-        logger.debug("_onRangeEdgeChanged abs = ({:.2f} {:.2f}), rel = ({:.2f} {:.2f})"
-                     .format(extMin, extMax, extMin / lutLen, extMax / lutLen))
+        orgAxRangeMin, orgAxRangeMax = orgAxisRange = self.axisItem.range
+        orgRangeLen = abs(orgAxRangeMax - orgAxRangeMin)
+
+        axRangeMin = orgAxRangeMin + orgRangeLen * extMin
+        axRangeMax = orgAxRangeMax + orgRangeLen * extMax
+
+        logger.debug("abs = ({:.2f} {:.2f}), rel = ({:.2f} {:.2f}), axis = ({:.2f} {:.2f})"
+                     .format(extMin, extMax, extMin, extMax, axRangeMin, axRangeMax))
 
