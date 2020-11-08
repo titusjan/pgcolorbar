@@ -140,6 +140,8 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         check_class(imageItem, pg.ImageItem, allowNone=True)
 
+        self._orgAxisRange = None  # Stores axis range at the start of dragging the region
+
         if COL_PROFILING:
             # Profiler that measures the drawing of the inspectors.
             self._profFileName = "col_legend.prof"
@@ -211,8 +213,8 @@ class ColorLegendItem(pg.GraphicsWidget):
             brush=pg.mkBrush(pg.mkBrush('#00ffff33')))      # partially transparent green)
 
         self.edgeRegion.setZValue(1500)
-
-
+        for line in self.edgeRegion.lines:
+            line.setCursor(QtCore.Qt.SplitVCursor)
 
         #self.overlayViewBox.addItem(self.edgeRegion)
         self.colorScaleViewBox.addItem(self.edgeRegion)
@@ -610,21 +612,47 @@ class ColorLegendItem(pg.GraphicsWidget):
             logger.debug("Can't extend LUT edges when no LUT is defined.")
             return
 
+        # Convert coordinates from the colorScaleViewBox to the overlayViewBox, which is linked
+        # to the axis and histogram.
         lutMin, lutMax = 0, len(self.getLut())
-        lutLen = abs(lutMax - lutMin)
         regMin, regMax = self.edgeRegion.getRegion()
 
-        extMin = (regMin - lutMin) / lutLen  # minimum is extended by this factor
-        extMax = (regMax - lutMax) / lutLen  # maximum is extended by this factor
+        facMax = (regMax - regMin) / (lutMax - lutMin)
 
-        orgAxRangeMin, orgAxRangeMax = orgAxisRange = self.axisItem.range
+        if self._orgAxisRange is None:
+            self._orgAxisRange = self.axisItem.range
+            logger.debug("Axis range when dragging started: {}".format(self._orgAxisRange))
+
+        orgAxRangeMin, orgAxRangeMax = self._orgAxisRange
         orgRangeLen = abs(orgAxRangeMax - orgAxRangeMin)
 
-        axRangeMin = orgAxRangeMin + orgRangeLen * extMin
-        axRangeMax = orgAxRangeMax + orgRangeLen * extMax
+        # If the region was extended by a factor X, the overlay/axis should be extened by the
+        # same factor as well
 
-        logger.debug("abs = ({:.2f} {:.2f}), rel = ({:.2f} {:.2f}), axis = ({:.2f} {:.2f})"
-                     .format(extMin, extMax, extMin, extMax, axRangeMin, axRangeMax))
+        if regMin == lutMin:
+            # Dragging the maximum end of the region
+            logger.debug("Dragging the maximum end of the region.")
+            newAxRangeMin = orgAxRangeMin
+            newAxRangeMax = orgAxRangeMin + orgRangeLen / facMax
+        elif regMax == lutMax:
+            # Dragging the minimum end of the region
+            logger.debug("Dragging the minimum end of the region.")
+            newAxRangeMin = orgAxRangeMax - orgRangeLen / facMax
+            newAxRangeMax = orgAxRangeMax
+        else:
+            # Dragging both ends of the region. Do nothing
+            logger.debug("Dragging both ends of the region.")
+            newAxRangeMin = orgAxRangeMin
+            newAxRangeMax = orgAxRangeMax
+
+
+        logger.debug("orgAx = ({:.2f} {:.2f}),  "
+                     "factor = {:.2f}, axis = ({:.2f}, {:.2f})"
+                     .format(orgAxRangeMin, orgAxRangeMax,
+                             facMax, newAxRangeMin, newAxRangeMax))
+
+        self.overlayViewBox.setYRange(newAxRangeMin, newAxRangeMax, padding=0.0)
+
 
     @QtCore.Slot()
     def _onEdgeRegionFinished(self):
@@ -632,8 +660,11 @@ class ColorLegendItem(pg.GraphicsWidget):
 
             Will reset the edge range to the edge of the color scale.
         """
+        self._orgAxisRange = None # reset dragging axis range
+
         logger.debug("Resetting edge region")
         lutMin, lutMax = 0, len(self.getLut())
+
         logger.debug("Setting lutMax to: {}".format(lutMax))
         self.edgeRegion.setRegion((lutMin, lutMax))
 

@@ -63,6 +63,13 @@ class ImageLevelsConfigWidget(QtWidgets.QWidget):
         self.maxLevelSpinBox.setDecimals(3)
         self.mainLayout.addWidget(self.maxLevelSpinBox)
 
+        try:
+            self.minLevelSpinBox.setStepType(QtWidgets.QAbstractSpinBox.AdaptiveDecimalStepType)
+            self.maxLevelSpinBox.setStepType(QtWidgets.QAbstractSpinBox.AdaptiveDecimalStepType)
+        except AttributeError:
+            logger.warning("Unable to QSpinBox.setStepType (only available in Qt 5.12 and later")
+
+
         self.minLevelSpinBox.valueChanged.connect(lambda val: self.setLevels((val, None)))
         self.maxLevelSpinBox.valueChanged.connect(lambda val: self.setLevels((None, val)))
         self.colorLegendItem.sigLevelsChanged.connect(self._updateSpinBoxLevels)
@@ -242,6 +249,7 @@ def main():
     logger.info("Python executable: {}".format(sys.executable))
     logger.info("Python version: {}".format(sys.version))
     logger.info("PyQt bindings: {}".format(pg.Qt.QT_LIB))
+    logger.info("Qt version: {}".format(pg.QtCore.QT_VERSION_STR))
     logger.info("PyQtGraph version: {}".format(pg.__version__))
 
     app = QtWidgets.QApplication([])
