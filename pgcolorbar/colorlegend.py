@@ -171,7 +171,12 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.fillHistogram()
 
         # Color scale. Viewbox ranges from 0 to number of colors
-        self.colorScaleViewBox = pg.ViewBox(enableMenu=False, border=None)
+        borderPenCs = pg.mkPen(color='g', width=0)
+        #borderPenCs = None
+
+        self.colorScaleViewBox = pg.ViewBox(enableMenu=False, border=borderPenCs)
+        # self.colorScaleViewBox.setFlag(self.ItemClipsToShape, False)
+        # self.colorScaleViewBox.setFlag(self.ItemClipsChildrenToShape, False)
 
         self.colorScaleViewBox.disableAutoRange(pg.ViewBox.XYAxes)
         self.colorScaleViewBox.setMouseEnabled(x=False, y=False)
@@ -184,8 +189,10 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         # Overlay viewbox that will have always have the same geometry as the colorScaleViewBox.
         # The histograms and axis item are linked to this viewbox
-        self.overlayViewBox = MyViewBox(
-            enableMenu=False, border=pg.mkPen(pg.getConfigOption('foreground'), width=1))
+        borderPenOl = pg.mkPen(pg.getConfigOption('foreground'))
+        #borderPenOl = pg.mkPen(color='b', width=2, style=QtCore.Qt.DashDotLine)
+        #borderPenOl = None
+        self.overlayViewBox = MyViewBox(enableMenu=False, border=borderPenOl)
         self.overlayViewBox.setZValue(100)
 
         # Axis that shows the ticks and values
@@ -194,8 +201,19 @@ class ColorLegendItem(pg.GraphicsWidget):
             showValues=True, maxTickLength=maxTickLength, parent=self)
         self.histViewBox.linkView(pg.ViewBox.YAxis, self.overlayViewBox)
 
-        self.edgeRegion = pg.LinearRegionItem(orientation='horizontal', swapMode='block')
-        self.edgeRegion.setZValue(150)
+        self.edgeRegion = pg.LinearRegionItem(
+            orientation='horizontal',
+            swapMode='block',
+            #span=(0.0, 10.0), # extent span so that horizontal dragging doesn't reveal the edges # hangs program :-(
+            pen=pg.mkPen(color='#ffff00', width=5),
+            hoverPen=pg.mkPen(color='#ff00ff', width=10),
+            hoverBrush=pg.mkBrush('#ff000055'),             # partially transparent red
+            brush=pg.mkBrush(pg.mkBrush('#00ffff33')))      # partially transparent green)
+
+        self.edgeRegion.setZValue(1500)
+
+
+
         #self.overlayViewBox.addItem(self.edgeRegion)
         self.colorScaleViewBox.addItem(self.edgeRegion)
         # #self.edgeRegion.hide()
@@ -220,7 +238,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.overlayViewBox.sigYRangeChanged.connect(self._updateImageLevels)
 
         self.edgeRegion.sigRegionChanged.connect(self._onEdgeRegionChanged)
-        #self.edgeRegion.sigRegionChangeFinished.connect()
+        self.edgeRegion.sigRegionChangeFinished.connect(self._onEdgeRegionFinished)
 
         self.setLabel(label)
         self.showHistogram(showHistogram)
@@ -237,7 +255,9 @@ class ColorLegendItem(pg.GraphicsWidget):
     def _updateOverlay(self):
         """ Makes the overlay the same size as the colorScaleViewBox
         """
-        self.overlayViewBox.setGeometry(self.colorScaleViewBox.geometry())
+        geom = self.colorScaleViewBox.geometry()
+        logger.debug("____ updateOverlay____ geom = {}".format(geom))
+        self.overlayViewBox.setGeometry(geom)
 
 
     def getImageItem(self):
@@ -330,7 +350,7 @@ class ColorLegendItem(pg.GraphicsWidget):
             self.histPlotDataItem.setData(*histogram)
 
             # Discard outliers when setting the histogram height so one dominant color in the
-            # image doesn't make the other colors occurences unreadable.
+            # image doesn't make the other colors occurrences unreadable.
             histValues = histogram[1]
             histYrange = np.percentile(histValues, (self.histHeightPercentile, ))[0]
             self.histViewBox.setRange(xRange=(-histYrange, 0), padding=None)
@@ -497,7 +517,7 @@ class ColorLegendItem(pg.GraphicsWidget):
 
             :param ndarray Array: an N x 3 array.
         """
-        logger.debug("------ setLut called")
+        logger.debug("setLut called")
         assertIsLut(lut)
 
         pgVersionInfo = versionStrToTuple(pg.__version__)
@@ -545,7 +565,7 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         # Set the edgeRegion to the egdes of the look up table
 
-        self.edgeRegion.setRegion([0.25, len(lut)-0.25])
+        self.edgeRegion.setRegion([0.25, len(lut)-0.25]) # TODO: temporary debug
 
 
     @property
@@ -605,4 +625,16 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         logger.debug("abs = ({:.2f} {:.2f}), rel = ({:.2f} {:.2f}), axis = ({:.2f} {:.2f})"
                      .format(extMin, extMax, extMin, extMax, axRangeMin, axRangeMax))
+
+    @QtCore.Slot()
+    def _onEdgeRegionFinished(self):
+        """ Called when the user has finished dragging the LUT by one of the edge selectors.
+
+            Will reset the edge range to the edge of the color scale.
+        """
+        logger.debug("Resetting edge region")
+        lutMin, lutMax = 0, len(self.getLut())
+        logger.debug("Setting lutMax to: {}".format(lutMax))
+        self.edgeRegion.setRegion((lutMin, lutMax))
+
 
