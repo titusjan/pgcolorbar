@@ -540,7 +540,7 @@ class ColorLegendItem(pg.GraphicsWidget):
             raise AssertionError("Unexpected imageAxisOrder config value: {}".format(imgAxOrder))
 
         logger.debug("lutImg.shape: {}".format(lutImg.shape))
-        #self.colorScaleImageItem.setImage(lutImg)
+        self.colorScaleImageItem.setImage(lutImg)
 
         yRange = [0, len(lut)]
         logger.debug("Setting colorScaleViewBox yrange to: {}".format(yRange))
