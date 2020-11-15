@@ -67,34 +67,6 @@ def isExtended(lut):
 #
 # Gebruik isFinish om een modifier te onthouden
 
-class MyViewBox(pg.ViewBox):
-    """ Viewbox that overrides some keypress and mouse events
-    """
-    def init(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.dragModifiers = None
-
-    def mouseDragEvent(self, event, axis=None):
-        """ Called in case of a pyqtgraph.GraphicsScene.mouseEvents.MouseDragEvent
-        """
-        #logger.info("mouseDragEvent: button {} {}".format(ev.button(), ev.modifiers()))
-
-        # logger.info("mouseDragEvent: button {} {}"
-        #             .format(event.modifiers(), event.isFinish()))
-        # if ev._button == 4:
-        #     ev._button = 2
-
-        # if shift in event.modifiers():
-        #     filter out event and set levels manually
-
-        if event.isFinish:
-            self.dragModifiers = None
-        else:
-            self.dragModifiers = event.modifiers
-        super().mouseDragEvent(event, axis=axis)
-
-
 
 
 class ColorLegendItem(pg.GraphicsWidget):
@@ -140,7 +112,10 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         check_class(imageItem, pg.ImageItem, allowNone=True)
 
-        self._orgAxisRange = None  # Stores axis range at the start of dragging the region
+        #self._orgAxisRange = None  # Stores axis range at the start of dragging the region
+        # self._dragStartPos = None  # Stores start position when one of the edge-lines are dragged
+        self._overlayVbDragStartRange = None  # Stores positions of the drag lines at drag start
+
 
         if COL_PROFILING:
             # Profiler that measures the drawing of the inspectors.
@@ -174,11 +149,7 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         # Color scale. Viewbox ranges from 0 to number of colors
         borderPenCs = pg.mkPen(color='g', width=0)
-        #borderPenCs = None
-
         self.colorScaleViewBox = pg.ViewBox(enableMenu=False, border=borderPenCs)
-        # self.colorScaleViewBox.setFlag(self.ItemClipsToShape, False)
-        # self.colorScaleViewBox.setFlag(self.ItemClipsChildrenToShape, False)
 
         self.colorScaleViewBox.disableAutoRange(pg.ViewBox.XYAxes)
         self.colorScaleViewBox.setMouseEnabled(x=False, y=False)
@@ -194,7 +165,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         borderPenOl = pg.mkPen(pg.getConfigOption('foreground'))
         #borderPenOl = pg.mkPen(color='b', width=2, style=QtCore.Qt.DashDotLine)
         #borderPenOl = None
-        self.overlayViewBox = MyViewBox(enableMenu=False, border=borderPenOl)
+        self.overlayViewBox = pg.ViewBox(enableMenu=False, border=borderPenOl)
         self.overlayViewBox.setZValue(100)
 
         # Axis that shows the ticks and values
@@ -203,21 +174,34 @@ class ColorLegendItem(pg.GraphicsWidget):
             showValues=True, maxTickLength=maxTickLength, parent=self)
         self.histViewBox.linkView(pg.ViewBox.YAxis, self.overlayViewBox)
 
-        self.edgeRegion = pg.LinearRegionItem(
-            orientation='horizontal',
-            swapMode='block',
-            #span=(0.0, 10.0), # extent span so that horizontal dragging doesn't reveal the edges # hangs program :-(
+        lineKwds = dict(
+            movable=True,
             pen=pg.mkPen(color='#ffff00', width=5),
-            hoverPen=pg.mkPen(color='#ff00ff', width=10),
-            hoverBrush=pg.mkBrush('#ff000055'),             # partially transparent red
-            brush=pg.mkBrush(pg.mkBrush('#00ffff33')))      # partially transparent green)
+            hoverPen=pg.mkPen(color='#ff00ff', width=10))
 
-        self.edgeRegion.setZValue(1500)
-        for line in self.edgeRegion.lines:
+
+        self.lineMin = pg.InfiniteLine(QtCore.QPointF(0, 0.1), angle=0, **lineKwds)
+        self.lineMax = pg.InfiniteLine(QtCore.QPointF(0, 3.9), angle=0, **lineKwds)
+        # self.lineMin = pg.InfiniteLine(QtCore.QPointF(1.5, 10), angle=90, **lineKwds)
+        # self.lineMax = pg.InfiniteLine(QtCore.QPointF(3.5, 20), angle=90, **lineKwds)
+
+        # self.edgeRegion = pg.LinearRegionItem(
+        #     orientation='horizontal',
+        #     swapMode='block',
+        #     #span=(0.0, 10.0), # extent span so that horizontal dragging doesn't reveal the edges # hangs program :-(
+        #     pen=pg.mkPen(color='#ffff00', width=5),
+        #     hoverPen=pg.mkPen(color='#ff00ff', width=10),
+        #     hoverBrush=pg.mkBrush('#ff000055'),             # partially transparent red
+        #     brush=pg.mkBrush(pg.mkBrush('#00ffff33')))      # partially transparent green)
+
+        # self.edgeRegion.setZValue(1500)
+        for line in [self.lineMin, self.lineMax]:
+            line.setZValue(1500)
             line.setCursor(QtCore.Qt.SplitVCursor)
+            self.colorScaleViewBox.addItem(line)
 
         #self.overlayViewBox.addItem(self.edgeRegion)
-        self.colorScaleViewBox.addItem(self.edgeRegion)
+        # self.colorScaleViewBox.addItem(self.edgeRegion)
         # #self.edgeRegion.hide()
         #
 
@@ -239,12 +223,15 @@ class ColorLegendItem(pg.GraphicsWidget):
         # image levels.
         self.overlayViewBox.sigYRangeChanged.connect(self._updateImageLevels)
 
-        self.edgeRegion.sigRegionChanged.connect(self._onEdgeRegionChanged)
-        self.edgeRegion.sigRegionChangeFinished.connect(self._onEdgeRegionFinished)
-
         self.setLabel(label)
         self.showHistogram(showHistogram)
         self.setImageItem(imageItem)
+
+        for line in [self.lineMin, self.lineMax]:
+            line.sigPositionChanged.connect(self._onEdgeLineChanged)
+            line.sigPositionChangeFinished.connect(self._onEdgeDragFinished)
+
+        self._onEdgeDragFinished()  # reset drag
 
 
     def finalize(self):
@@ -258,7 +245,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         """ Makes the overlay the same size as the colorScaleViewBox
         """
         geom = self.colorScaleViewBox.geometry()
-        logger.debug("____ updateOverlay____ geom = {}".format(geom))
+        # logger.debug("____ updateOverlay____ geom = {}".format(geom))
         self.overlayViewBox.setGeometry(geom)
 
 
@@ -356,7 +343,6 @@ class ColorLegendItem(pg.GraphicsWidget):
             histValues = histogram[1]
             histYrange = np.percentile(histValues, (self.histHeightPercentile, ))[0]
             self.histViewBox.setRange(xRange=(-histYrange, 0), padding=None)
-
 
 
     @classmethod
@@ -468,8 +454,8 @@ class ColorLegendItem(pg.GraphicsWidget):
 
 
     @QtCore.Slot()
-    def resetColorLevels(self):
-        """ Sets the color levels from the min and max of the image
+    def resetColorLevels(self):  # TODO: rename
+        """ Sets the color levels from the min and max values of the image
         """
         logger.debug("Reset scale")
 
@@ -554,7 +540,7 @@ class ColorLegendItem(pg.GraphicsWidget):
             raise AssertionError("Unexpected imageAxisOrder config value: {}".format(imgAxOrder))
 
         logger.debug("lutImg.shape: {}".format(lutImg.shape))
-        self.colorScaleImageItem.setImage(lutImg)
+        #self.colorScaleImageItem.setImage(lutImg)
 
         yRange = [0, len(lut)]
         logger.debug("Setting colorScaleViewBox yrange to: {}".format(yRange))
@@ -565,9 +551,7 @@ class ColorLegendItem(pg.GraphicsWidget):
             xRange=[0, barWidth], yRange=yRange, padding=0.0,
             update=False, disableAutoRange=False)
 
-        # Set the edgeRegion to the egdes of the look up table
-
-        self.edgeRegion.setRegion([0.25, len(lut)-0.25]) # TODO: temporary debug
+        self._onEdgeDragFinished()
 
 
     @property
@@ -602,8 +586,8 @@ class ColorLegendItem(pg.GraphicsWidget):
             self.histPlotDataItem.setFillLevel(None)
 
 
-    @QtCore.Slot()
-    def _onEdgeRegionChanged(self):
+    @QtCore.Slot(object)
+    def _onEdgeLineChanged(self, lineItem):
         """ Called when the user drags the LUT by one of the edge selectors.
 
             Will update the LUT range at one edge while keeping the other side fixed.
@@ -612,60 +596,52 @@ class ColorLegendItem(pg.GraphicsWidget):
             logger.debug("Can't extend LUT edges when no LUT is defined.")
             return
 
-        # Convert coordinates from the colorScaleViewBox to the overlayViewBox, which is linked
-        # to the axis and histogram.
-        lutMin, lutMax = 0, len(self.getLut())
-        regMin, regMax = self.edgeRegion.getRegion()
+        if self._overlayVbDragStartRange is None:   # Executed only at start of drag.
+            # Make sure the lines at the end. Otherwise the scaling doesn't work
+            self._onEdgeDragFinished()
 
-        facMax = (regMax - regMin) / (lutMax - lutMin)
+            self._overlayVbDragStartRange = self.axisItem.range
+            logger.debug("Edge range at drag start: {}".format(self._overlayVbDragStartRange))
 
-        if self._orgAxisRange is None:
-            self._orgAxisRange = self.axisItem.range
-            logger.debug("Axis range when dragging started: {}".format(self._orgAxisRange))
 
-        orgAxRangeMin, orgAxRangeMax = self._orgAxisRange
-        orgRangeLen = abs(orgAxRangeMax - orgAxRangeMin)
+        orgLenLutViewBox = len(self.getLut())
+        curLenLutViewBox = self.lineMax.getYPos() - self.lineMin.getYPos()
+        factor = curLenLutViewBox / orgLenLutViewBox
 
-        # If the region was extended by a factor X, the overlay/axis should be extened by the
+        # If the region was extended by a factor X, the overlay/axis should be extended by the
         # same factor as well
 
-        if regMin == lutMin:
-            # Dragging the maximum end of the region
-            logger.debug("Dragging the maximum end of the region.")
-            newAxRangeMin = orgAxRangeMin
-            newAxRangeMax = orgAxRangeMin + orgRangeLen / facMax
-        elif regMax == lutMax:
-            # Dragging the minimum end of the region
-            logger.debug("Dragging the minimum end of the region.")
-            newAxRangeMin = orgAxRangeMax - orgRangeLen / facMax
-            newAxRangeMax = orgAxRangeMax
+        orgMin, orgMax = self._overlayVbDragStartRange
+        orgLen = abs(orgMax - orgMin)
+
+        if lineItem == self.lineMin:
+            newMin = orgMax - orgLen / factor
+            newMax = orgMax
+        elif lineItem == self.lineMax:
+            newMin = orgMin
+            newMax = orgMin + orgLen / factor
         else:
-            # Dragging both ends of the region. Do nothing
-            logger.debug("Dragging both ends of the region.")
-            newAxRangeMin = orgAxRangeMin
-            newAxRangeMax = orgAxRangeMax
+            raise AssertionError("Unexpected lineItem: {}".format(lineItem))
 
-
-        logger.debug("orgAx = ({:.2f} {:.2f}),  "
-                     "factor = {:.2f}, axis = ({:.2f}, {:.2f})"
-                     .format(orgAxRangeMin, orgAxRangeMax,
-                             facMax, newAxRangeMin, newAxRangeMax))
-
-        self.overlayViewBox.setYRange(newAxRangeMin, newAxRangeMax, padding=0.0)
+        self.overlayViewBox.setYRange(newMin, newMax, padding=0.0)
 
 
     @QtCore.Slot()
-    def _onEdgeRegionFinished(self):
+    def _onEdgeDragFinished(self):
         """ Called when the user has finished dragging the LUT by one of the edge selectors.
 
             Will reset the edge range to the edge of the color scale.
         """
-        self._orgAxisRange = None # reset dragging axis range
-
         logger.debug("Resetting edge region")
-        lutMin, lutMax = 0, len(self.getLut())
+        oldBlockStateMin = self.lineMin.blockSignals(True)
+        oldBlockStateMax = self.lineMax.blockSignals(True)
+        try:
+            self.lineMin.setValue(0)
+            self.lineMax.setValue(len(self.getLut()))
+        finally:
+            self.lineMin.blockSignals(oldBlockStateMin)
+            self.lineMax.blockSignals(oldBlockStateMax)
 
-        logger.debug("Setting lutMax to: {}".format(lutMax))
-        self.edgeRegion.setRegion((lutMin, lutMax))
+        self._overlayVbDragStartRange = None # reset dragging axis range
 
 
