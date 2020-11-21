@@ -158,7 +158,6 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         self.colorScaleImageItem = pg.ImageItem() # image data will be set in setLut
         self.colorScaleViewBox.addItem(self.colorScaleImageItem)
-        self.colorScaleViewBox.setZValue(10)
 
         # Overlay viewbox that will have always have the same geometry as the colorScaleViewBox.
         # The histograms and axis item are linked to this viewbox
@@ -166,7 +165,6 @@ class ColorLegendItem(pg.GraphicsWidget):
         #borderPenOl = pg.mkPen(color='b', width=2, style=QtCore.Qt.DashDotLine)
         #borderPenOl = None
         self.overlayViewBox = pg.ViewBox(enableMenu=False, border=borderPenOl)
-        self.overlayViewBox.setZValue(100)
 
         # Axis that shows the ticks and values
         self.axisItem = pg.AxisItem(
@@ -174,16 +172,15 @@ class ColorLegendItem(pg.GraphicsWidget):
             showValues=True, maxTickLength=maxTickLength, parent=self)
         self.histViewBox.linkView(pg.ViewBox.YAxis, self.overlayViewBox)
 
+        # Infinite lines that allow the user to drag the legend at one end
+
         lineKwds = dict(
             movable=True,
             pen=pg.mkPen(color='#ffff00', width=5),
             hoverPen=pg.mkPen(color='#ff00ff', width=10))
 
-
-        self.lineMin = pg.InfiniteLine(QtCore.QPointF(0, 0.1), angle=0, **lineKwds)
-        self.lineMax = pg.InfiniteLine(QtCore.QPointF(0, 3.9), angle=0, **lineKwds)
-        # self.lineMin = pg.InfiniteLine(QtCore.QPointF(1.5, 10), angle=90, **lineKwds)
-        # self.lineMax = pg.InfiniteLine(QtCore.QPointF(3.5, 20), angle=90, **lineKwds)
+        self.lineMin = pg.InfiniteLine(QtCore.QPointF(0, 0.0), angle=0, **lineKwds)
+        self.lineMax = pg.InfiniteLine(QtCore.QPointF(0, 1.0), angle=0, **lineKwds)
 
         # self.edgeRegion = pg.LinearRegionItem(
         #     orientation='horizontal',
@@ -194,16 +191,14 @@ class ColorLegendItem(pg.GraphicsWidget):
         #     hoverBrush=pg.mkBrush('#ff000055'),             # partially transparent red
         #     brush=pg.mkBrush(pg.mkBrush('#00ffff33')))      # partially transparent green)
 
-        # self.edgeRegion.setZValue(1500)
-        for line in [self.lineMin, self.lineMax]:
-            line.setZValue(1500)
-            line.setCursor(QtCore.Qt.SplitVCursor)
-            self.colorScaleViewBox.addItem(line)
+        borderPenEl = pg.mkPen(color='r', width=1)
+        self.edgeLinesViewBox = pg.ViewBox(enableMenu=False, border=borderPenEl)
+        self.edgeLinesViewBox.disableAutoRange(pg.ViewBox.XYAxes)
+        self.edgeLinesViewBox.setMouseEnabled(x=False, y=False)
 
-        #self.overlayViewBox.addItem(self.edgeRegion)
-        # self.colorScaleViewBox.addItem(self.edgeRegion)
-        # #self.edgeRegion.hide()
-        #
+        for line in [self.lineMin, self.lineMax]:
+            line.setCursor(QtCore.Qt.SplitVCursor)
+            self.edgeLinesViewBox.addItem(line)
 
         # Overall layout
         self.mainLayout = QtWidgets.QGraphicsGridLayout()
@@ -214,9 +209,16 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.mainLayout.addItem(self.colorScaleViewBox, 0, 1)
         self.mainLayout.addItem(self.axisItem, 0, 2)
         self.overlayViewBox.setParentItem(self.colorScaleViewBox.parentItem())
+        self.edgeLinesViewBox.setParentItem(self.colorScaleViewBox.parentItem())
+
+        self.colorScaleViewBox.setZValue(10)
+        self.overlayViewBox.setZValue(100)
+        self.edgeLinesViewBox.setZValue(20)
+        for line in [self.lineMin, self.lineMax]:
+            line.setZValue(1500)
 
         # Connect signals
-        self.colorScaleViewBox.geometryChanged.connect(self._updateOverlay)
+        self.colorScaleViewBox.geometryChanged.connect(self._updateVbGeom)
 
         # It might also trigger an update when the axis is resized (but can't reproduce it
         # anymore). If needed we could test if the range has changed substantially before updating
@@ -241,12 +243,19 @@ class ColorLegendItem(pg.GraphicsWidget):
             profStats = pstats.Stats(self._profiler)
             profStats.dump_stats(self._profFileName)
 
-    def _updateOverlay(self):
-        """ Makes the overlay the same size as the colorScaleViewBox
+
+    def _updateVbGeom(self):
+        """ Makes the overlay viewbox the same size as the colorScaleViewBox and makes the
+            edge line viewbox the same size as the histogram, color scale, and axis together.
         """
-        geom = self.colorScaleViewBox.geometry()
-        # logger.debug("____ updateOverlay____ geom = {}".format(geom))
-        self.overlayViewBox.setGeometry(geom)
+        geomAx = self.axisItem.geometry()
+        geomHist = self.histViewBox.geometry()
+        geomCs = self.colorScaleViewBox.geometry()
+        self.overlayViewBox.setGeometry(geomCs)
+
+        totalWidth = geomHist.width() + geomCs.width() + geomAx.width()
+        geomEl = QtCore.QRectF(geomHist.x(), geomCs.y(), totalWidth, geomCs.height())
+        self.edgeLinesViewBox.setGeometry(geomEl)
 
 
     def getImageItem(self):
@@ -397,7 +406,6 @@ class ColorLegendItem(pg.GraphicsWidget):
             return False
         else:
             return imageItem.image.dtype.kind in "ui"
-
 
 
     @classmethod
@@ -551,6 +559,10 @@ class ColorLegendItem(pg.GraphicsWidget):
             xRange=[0, barWidth], yRange=yRange, padding=0.0,
             update=False, disableAutoRange=False)
 
+        self.edgeLinesViewBox.setRange(
+            xRange=[0, barWidth], yRange=yRange, padding=0.0,
+            update=False, disableAutoRange=False)
+
         self._onEdgeDragFinished()
 
 
@@ -603,7 +615,6 @@ class ColorLegendItem(pg.GraphicsWidget):
             self._overlayVbDragStartRange = self.axisItem.range
             logger.debug("Edge range at drag start: {}".format(self._overlayVbDragStartRange))
 
-
         orgLenLutViewBox = len(self.getLut())
         curLenLutViewBox = self.lineMax.getYPos() - self.lineMin.getYPos()
         factor = curLenLutViewBox / orgLenLutViewBox
@@ -632,7 +643,6 @@ class ColorLegendItem(pg.GraphicsWidget):
 
             Will reset the edge range to the edge of the color scale.
         """
-        logger.debug("Resetting edge region")
         oldBlockStateMin = self.lineMin.blockSignals(True)
         oldBlockStateMax = self.lineMax.blockSignals(True)
         try:
