@@ -1,7 +1,7 @@
 """ Color legend.
 
     Consists of a vertical color bar with a draggable axis that displays the values of the colors.
-    Optionally a histogram may be displayed.
+    Optionally a histogram can be displayed.
 """
 from __future__ import print_function, division
 
@@ -171,11 +171,11 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         # Infinite lines that allow the user to drag the legend at one end
 
-        lineKwds = dict(
-            movable=True,
-            pen=pg.mkPen(color=fgColor, width=2, style=QtCore.Qt.DotLine),
-            #pen=pg.mkPen(color=fgColor, width=3, dash=[1, 5]),
-            hoverPen=pg.mkPen(color=self._histFillColor, width=8, dash=[1, 3]))
+        self.edgePen = pg.mkPen(color=fgColor, width=3, dash=[1, 8])
+        self._orgEdgePen = self.edgePen
+        self.hoverPen = pg.mkPen(color=self._histFillColor, width=8, dash=[1, 3])
+
+        lineKwds = dict(movable=True, pen=self.edgePen, hoverPen=self.hoverPen)
 
         self.lineMin = pg.InfiniteLine(QtCore.QPointF(0, 0.0), angle=0, **lineKwds)
         self.lineMax = pg.InfiniteLine(QtCore.QPointF(0, 1.0), angle=0, **lineKwds)
@@ -247,6 +247,16 @@ class ColorLegendItem(pg.GraphicsWidget):
         totalWidth = geomHist.width() + geomCs.width() + geomAx.width()
         geomEl = QtCore.QRectF(geomHist.x(), geomCs.y(), totalWidth, geomCs.height())
         self.edgeLinesViewBox.setGeometry(geomEl)
+
+
+    def setEdgeMargins(self, margin):
+        """ Set margin (in pixels) at the both edges of the histogram
+
+            This makes the scale shorter and thus gives the user some more room to drag and extent
+            the color scale.
+        """
+        left, _top, right, _bottom = self.mainLayout.getContentsMargins()
+        self.mainLayout.setContentsMargins(left, margin, right, margin)
 
 
     def getImageItem(self):
@@ -434,7 +444,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         """
         if mouseClickEvent.button() in self.resetRangeMouseButtons:
             mouseClickEvent.accept()
-            self.resetColorLevels()
+            self.autoScaleFromImage()
 
 
     def getLabel(self):
@@ -453,7 +463,7 @@ class ColorLegendItem(pg.GraphicsWidget):
 
 
     @QtCore.Slot()
-    def resetColorLevels(self):  # TODO: rename
+    def autoScaleFromImage(self):  # TODO: rename
         """ Sets the color levels from the min and max values of the image
         """
         logger.debug("Reset scale")
@@ -579,6 +589,21 @@ class ColorLegendItem(pg.GraphicsWidget):
             self.histPlotDataItem.hide()
 
 
+    @property
+    def dragLinesVisible(self):
+        """ Indicates if the histogram is visible
+        """
+        return bool(self.edgePen)
+
+
+    @QtCore.Slot(bool)
+    def showDragLines(self, show):
+        """ Shows/hides the dashed lines at the edge of the
+        """
+        self.edgePen = self._orgEdgePen if show else None
+        self._setDragLinesPen(self.edgePen)
+
+
     def fillHistogram(self, fill=True, level=0.0, color=None):
         """ Fills the histogram
         """
@@ -587,6 +612,13 @@ class ColorLegendItem(pg.GraphicsWidget):
             self.histPlotDataItem.setFillBrush(self._histFillColor if color is None else color)
         else:
             self.histPlotDataItem.setFillLevel(None)
+
+
+    def _setDragLinesPen(self, qPen):
+        """ Sets the pen of the dashed lines at the edges which can be dragged to change the range
+        """
+        self.lineMin.setPen(qPen)
+        self.lineMax.setPen(qPen)
 
 
     @QtCore.Slot(object)
@@ -603,12 +635,14 @@ class ColorLegendItem(pg.GraphicsWidget):
             # Make sure the lines at the end. Otherwise the scaling doesn't work
             self._onEdgeDragFinished()
 
+            self._setDragLinesPen(self.hoverPen) # Use the hover pen during dragging
+
             self._overlayVbDragStartRange = self.axisItem.range
             logger.debug("Edge range at drag start: {}".format(self._overlayVbDragStartRange))
 
         orgLenLutViewBox = len(self.getLut())
         curLenLutViewBox = self.lineMax.getYPos() - self.lineMin.getYPos()
-        factor = curLenLutViewBox / orgLenLutViewBox
+        factor = max(0.01, curLenLutViewBox / orgLenLutViewBox) # Prevent negative and zero
 
         # If the region was extended by a factor X, the overlay/axis should be extended by the
         # same factor as well
@@ -637,8 +671,10 @@ class ColorLegendItem(pg.GraphicsWidget):
         oldBlockStateMin = self.lineMin.blockSignals(True)
         oldBlockStateMax = self.lineMax.blockSignals(True)
         try:
+            self._setDragLinesPen(self.edgePen) # revert to default pen
             self.lineMin.setValue(0)
-            self.lineMax.setValue(len(self.getLut()))
+            lutMax = len(self.getLut()) if self.getLut() is not None else 1
+            self.lineMax.setValue(lutMax)
         finally:
             self.lineMin.blockSignals(oldBlockStateMin)
             self.lineMax.blockSignals(oldBlockStateMax)

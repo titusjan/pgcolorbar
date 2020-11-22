@@ -23,9 +23,10 @@ class ImageLevelsConfigWidget(QtWidgets.QWidget):
         super(ImageLevelsConfigWidget, self).__init__(parent=parent)
 
         self.colorLegendItem = colorLegendItem
+        self.colorLegendItem.setEdgeMargins(50) # add some space for user to drag edges
 
         self.resetAction = QtWidgets.QAction("reset", self)
-        self.resetAction.triggered.connect(self.colorLegendItem.resetColorLevels)
+        self.resetAction.triggered.connect(self.colorLegendItem.autoScaleFromImage)
         self.resetAction.setShortcut("Ctrl+0")
         self.addAction(self.resetAction)
 
@@ -33,8 +34,14 @@ class ImageLevelsConfigWidget(QtWidgets.QWidget):
         self.toggleHistogramAction.setCheckable(True)
         self.toggleHistogramAction.setChecked(self.colorLegendItem.histogramIsVisible)
         self.toggleHistogramAction.triggered.connect(self.colorLegendItem.showHistogram)
-        self.toggleHistogramAction.setShortcut("Ctrl+S")
+        self.toggleHistogramAction.setShortcut("Ctrl+H")
         self.addAction(self.toggleHistogramAction)
+
+        self.toggleDragLinesAction = QtWidgets.QAction("drag lines", self)
+        self.toggleDragLinesAction.setCheckable(True)
+        self.toggleDragLinesAction.setChecked(bool(self.colorLegendItem.edgePen))
+        self.toggleDragLinesAction.triggered.connect(self.colorLegendItem.showDragLines)
+        self.addAction(self.toggleDragLinesAction)
 
         self.mainLayout = QtWidgets.QHBoxLayout()
         self.mainLayout.setContentsMargins(5, 0, 5, 0) # left, top, right, bottom
@@ -81,6 +88,10 @@ class ImageLevelsConfigWidget(QtWidgets.QWidget):
         self.histogramButton = QtWidgets.QToolButton()
         self.histogramButton.setDefaultAction(self.toggleHistogramAction)
         self.mainLayout.addWidget(self.histogramButton)
+
+        self.dragLinesButton = QtWidgets.QToolButton()
+        self.dragLinesButton.setDefaultAction(self.toggleDragLinesAction)
+        self.mainLayout.addWidget(self.dragLinesButton)
 
 
 
@@ -217,7 +228,7 @@ class DemoWindow(QtWidgets.QMainWindow):
         self.imageItem.setImage(img.T)
         nRows, nCols = img.shape
         self.plotItem.setRange(xRange=[0, nCols], yRange=[0, nRows])
-        self.colorLegendItem.resetColorLevels()
+        self.colorLegendItem.autoScaleFromImage()
 
 
     def _setDataToNoise(self):
