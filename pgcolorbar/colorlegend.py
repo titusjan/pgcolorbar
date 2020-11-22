@@ -109,10 +109,6 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         check_class(imageItem, pg.ImageItem, allowNone=True)
 
-        #self._orgAxisRange = None  # Stores axis range at the start of dragging the region
-        # self._dragStartPos = None  # Stores start position when one of the edge-lines are dragged
-        self._overlayVbDragStartRange = None  # Stores positions of the drag lines at drag start
-
 
         if COL_PROFILING:
             # Profiler that measures the drawing of the inspectors.
@@ -126,6 +122,8 @@ class ColorLegendItem(pg.GraphicsWidget):
         self._histFillColor = histFillColor
         self.histogramWidth = 50
         self._imageItem = None
+        self._lutImg = None
+        self._overlayVbDragStartRange = None  # Stores positions of the drag lines at drag start
 
         # List of mouse buttons that reset the color range when clicked.
         # You can safely modify this list.
@@ -275,10 +273,13 @@ class ColorLegendItem(pg.GraphicsWidget):
         if self._imageItem:
             self._imageItem.sigImageChanged.disconnect(self.onImageChanged)
 
-        self._imageItem = imageItem
-        self._imageItem.sigImageChanged.connect(self.onImageChanged)
 
-        if self._imageItem.lut is not None:
+        self._imageItem = imageItem
+
+        if self._imageItem:
+            self._imageItem.sigImageChanged.connect(self.onImageChanged)
+
+        if self._imageItem and self._imageItem.lut is not None:
             self.setLut(self._imageItem.lut) # extents lut if necessary
         self.onImageChanged()
 
@@ -288,6 +289,11 @@ class ColorLegendItem(pg.GraphicsWidget):
 
             Updates the histogram and colorize the image (_updateImageLevels)
         """
+        if self._imageItem.image is None:
+            self.colorScaleImageItem.clear()
+        else:
+            self.colorScaleImageItem.setImage(self._lutImg)
+
         self._updateHistogram()
         self._updateImageLevels()
 
@@ -328,6 +334,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         """ Updates the histogram with data from the image
         """
         if not self._histogramIsVisible or self._imageItem is None or self._imageItem.image is None:
+            self.histPlotDataItem.setData([])  # seems necessary to clear data from screen
             self.histPlotDataItem.clear()
             return
 
@@ -344,6 +351,7 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         except Exception as ex:
             logger.warning("Unable to calculate histogram: {}".format(ex))
+            self.histPlotDataItem.setData([])  # seems necessary to clear data from screen
             self.histPlotDataItem.clear()
         else:
             self.histPlotDataItem.setData(*histogram)
@@ -386,8 +394,6 @@ class ColorLegendItem(pg.GraphicsWidget):
             step = (step, step)
 
         stepData = imgArr[::step[0], ::step[1]]
-
-        logger.debug("step: {}, stepData.shape: {}".format(step, stepData.shape))
 
         mn = np.nanmin(stepData)
         mx = np.nanmax(stepData)
@@ -506,7 +512,7 @@ class ColorLegendItem(pg.GraphicsWidget):
     def getLut(self):
         """ Returns the Lookup table of the image item.
         """
-        return self._imageItem.lut
+        return self._imageItem.lut if self._imageItem else None
 
 
     def setLut(self, lut):
@@ -540,16 +546,15 @@ class ColorLegendItem(pg.GraphicsWidget):
         barWidth = 1
         imgAxOrder = pg.getConfigOption('imageAxisOrder')
         if imgAxOrder == 'col-major':
-            lutImg = np.ones(shape=(barWidth, len(lut), 3), dtype=lut.dtype)
-            lutImg[...] = lut[np.newaxis, :, :]
+            self._lutImg = np.ones(shape=(barWidth, len(lut), 3), dtype=lut.dtype)
+            self._lutImg[...] = lut[np.newaxis, :, :]
         elif imgAxOrder == 'row-major':
-            lutImg = np.ones(shape=(len(lut), barWidth, 3), dtype=lut.dtype)
-            lutImg[...] = lut[:, np.newaxis, :]
+            self._lutImg = np.ones(shape=(len(lut), barWidth, 3), dtype=lut.dtype)
+            self._lutImg[...] = lut[:, np.newaxis, :]
         else:
             raise AssertionError("Unexpected imageAxisOrder config value: {}".format(imgAxOrder))
 
-        logger.debug("lutImg.shape: {}".format(lutImg.shape))
-        self.colorScaleImageItem.setImage(lutImg)
+        self.colorScaleImageItem.setImage(self._lutImg)
 
         yRange = [0, len(lut)]
         logger.debug("Setting colorScaleViewBox yrange to: {}".format(yRange))

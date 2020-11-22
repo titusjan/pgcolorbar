@@ -153,6 +153,12 @@ class DemoWindow(QtWidgets.QMainWindow):
     def _setupActions(self):
         """ Creates the UI actions.
         """
+        self.clearImgAction = QtWidgets.QAction("Clear", self)
+        self.clearImgAction.setToolTip("Removes all image data")
+        self.clearImgAction.triggered.connect(self.clearImage)
+        self.clearImgAction.setShortcut("Ctrl+C")
+        self.addAction(self.clearImgAction)
+
         self.noiseImgAction = QtWidgets.QAction("Noise", self)
         self.noiseImgAction.setToolTip("Sets the image data to noise.")
         self.noiseImgAction.triggered.connect(self._setDataToNoise)
@@ -175,7 +181,9 @@ class DemoWindow(QtWidgets.QMainWindow):
         self.viewMenu = self.menuBar.addMenu("&View")
 
         self.dataMenu = self.menuBar.addMenu("&Data")
+        self.dataMenu.addAction(self.clearImgAction)
         self.dataMenu.addAction(self.noiseImgAction)
+        #self.dataMenu.addAction(self.myTestAction)
 
 
     def _setupViews(self, lut, showHistogram):
@@ -219,6 +227,15 @@ class DemoWindow(QtWidgets.QMainWindow):
 
         self.addToolBar(QtCore.Qt.TopToolBarArea, self.imgToolBar)
         self.viewMenu.addAction(self.imgToolBar.toggleViewAction())
+
+
+    def clearImage(self):
+        """ Removes the image data
+        """
+        self.imageItem.clear()
+
+        # Unfortunately PyQtGraph doesn't emit this signal when the image is cleared.
+        self.imageItem.sigImageChanged.emit()
 
 
     def setImage(self, img):
