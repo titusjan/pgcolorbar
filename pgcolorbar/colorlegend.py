@@ -63,11 +63,6 @@ def isExtended(lut):
     return np.array_equal(lut[-1, :], lut[-2, :])
 
 
-# Gebruik isFinish om de region weer aan het einde te zetten
-#
-# Gebruik isFinish om een modifier te onthouden
-
-
 
 class ColorLegendItem(pg.GraphicsWidget):
     """ Color legend for an image plot.
@@ -91,6 +86,7 @@ class ColorLegendItem(pg.GraphicsWidget):
                  imageItem=None,
                  label=None,
                  showHistogram=True,
+                 histFillColor=(100, 100, 200),
                  subsampleStep='auto',
                  histHeightPercentile = 99.0,
                  maxTickLength=10):
@@ -98,7 +94,8 @@ class ColorLegendItem(pg.GraphicsWidget):
 
             :param imageItem pg.ImageItem: PyQtGraph ImageItem to which this legen will be linked
             :param Optonal[str] label: text to show next to the axis
-            :param bool showHistogram: if True (the default), a histogram of image values is drawn
+            :param bool showHistogram: if True (the default), a histogram of image values is drawn.
+            :param histFillColor: color to fill the histogram. Default same as in PyQtGraph.
             :param float histHeightPercentile: Only use this percentil when scaling the histogram
                 height. Often an image has one color that occurs very often and this then will
                 completely dominate the histogram. By discarding this color when scaling the
@@ -126,6 +123,7 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         self.histHeightPercentile = histHeightPercentile
         self._histogramIsVisible = showHistogram
+        self._histFillColor = histFillColor
         self.histogramWidth = 50
         self._imageItem = None
 
@@ -161,9 +159,8 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         # Overlay viewbox that will have always have the same geometry as the colorScaleViewBox.
         # The histograms and axis item are linked to this viewbox
-        borderPenOl = pg.mkPen(pg.getConfigOption('foreground'))
-        #borderPenOl = pg.mkPen(color='b', width=2, style=QtCore.Qt.DashDotLine)
-        #borderPenOl = None
+        fgColor = pg.getConfigOption('foreground')
+        borderPenOl = pg.mkPen(fgColor)
         self.overlayViewBox = pg.ViewBox(enableMenu=False, border=borderPenOl)
 
         # Axis that shows the ticks and values
@@ -176,23 +173,14 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         lineKwds = dict(
             movable=True,
-            pen=pg.mkPen(color='#ffff00', width=5),
-            hoverPen=pg.mkPen(color='#ff00ff', width=10))
+            pen=pg.mkPen(color=fgColor, width=2, style=QtCore.Qt.DotLine),
+            #pen=pg.mkPen(color=fgColor, width=3, dash=[1, 5]),
+            hoverPen=pg.mkPen(color=self._histFillColor, width=8, dash=[1, 3]))
 
         self.lineMin = pg.InfiniteLine(QtCore.QPointF(0, 0.0), angle=0, **lineKwds)
         self.lineMax = pg.InfiniteLine(QtCore.QPointF(0, 1.0), angle=0, **lineKwds)
 
-        # self.edgeRegion = pg.LinearRegionItem(
-        #     orientation='horizontal',
-        #     swapMode='block',
-        #     #span=(0.0, 10.0), # extent span so that horizontal dragging doesn't reveal the edges # hangs program :-(
-        #     pen=pg.mkPen(color='#ffff00', width=5),
-        #     hoverPen=pg.mkPen(color='#ff00ff', width=10),
-        #     hoverBrush=pg.mkBrush('#ff000055'),             # partially transparent red
-        #     brush=pg.mkBrush(pg.mkBrush('#00ffff33')))      # partially transparent green)
-
-        borderPenEl = pg.mkPen(color='r', width=1)
-        self.edgeLinesViewBox = pg.ViewBox(enableMenu=False, border=borderPenEl)
+        self.edgeLinesViewBox = pg.ViewBox(enableMenu=False, border=None)
         self.edgeLinesViewBox.disableAutoRange(pg.ViewBox.XYAxes)
         self.edgeLinesViewBox.setMouseEnabled(x=False, y=False)
 
@@ -211,11 +199,14 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.overlayViewBox.setParentItem(self.colorScaleViewBox.parentItem())
         self.edgeLinesViewBox.setParentItem(self.colorScaleViewBox.parentItem())
 
+        self.edgeLinesViewBox.setZValue(-10)
+        self.colorScaleImageItem.setZValue(500)
         self.colorScaleViewBox.setZValue(10)
-        self.overlayViewBox.setZValue(100)
-        self.edgeLinesViewBox.setZValue(20)
+        self.histViewBox.setZValue(10)
+        self.axisItem.setZValue(10)
+        self.overlayViewBox.setZValue(20)
         for line in [self.lineMin, self.lineMax]:
-            line.setZValue(1500)
+            line.setZValue(150)
 
         # Connect signals
         self.colorScaleViewBox.geometryChanged.connect(self._updateVbGeom)
@@ -588,12 +579,12 @@ class ColorLegendItem(pg.GraphicsWidget):
             self.histPlotDataItem.hide()
 
 
-    def fillHistogram(self, fill=True, level=0.0, color=(100, 100, 200)):
+    def fillHistogram(self, fill=True, level=0.0, color=None):
         """ Fills the histogram
         """
         if fill:
             self.histPlotDataItem.setFillLevel(level)
-            self.histPlotDataItem.setFillBrush(color)
+            self.histPlotDataItem.setFillBrush(self._histFillColor if color is None else color)
         else:
             self.histPlotDataItem.setFillLevel(None)
 
