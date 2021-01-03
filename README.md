@@ -11,7 +11,7 @@ I started this project because I wasn't satisfied with PyQtGraph's `HistogramLUT
 1. There is to direct way to directly match a color in the bar with the corresponding value. In PgColorBar the tick marks are displayed directly next to the corresponding color.
 2. It is not possible to define your own color scale, only the color scales defined in [GradientEditorItem.py](http://www.pyqtgraph.org/documentation/graphicsItems/gradienteditoritem.html) can be used. 
 
-Look at the [demo.py](https://github.com/titusjan/pgcolorbar/blob/master/demo.py) program to see how to integrate PgColorbar in your own program. For a real life example see [Argos](https://github.com/titusjan/argos). 
+Look at the [demo.py](https://github.com/titusjan/pgcolorbar/blob/master/demo.py) program to see how to integrate PgColorbar in your own program. For a real life example see [Argos](https://github.com/titusjan/argos). For the collection of color maps use in Argos see [CmLib](https://github.com/titusjan/cmlib).
 
 
 ### Installing PgColorbar

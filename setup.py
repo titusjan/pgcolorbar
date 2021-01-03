@@ -5,6 +5,7 @@ from __future__ import absolute_import
 # To make a release follow these steps:
 #   python setup.py sdist
 # or better
+#   rm -rf build dist
 #   python setup.py bdist_wheel
 #   twine upload dist/pgcolorbar-x.y.z-py3-none-any.whl
 
@@ -90,6 +91,8 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
         'Topic :: Software Development',
         'Topic :: Scientific/Engineering',
         'Topic :: Utilities',
