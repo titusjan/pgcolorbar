@@ -205,9 +205,10 @@ class DemoWindow(QtWidgets.QMainWindow):
         self.plotItem.addItem(self.imageItem)
 
         self.colorLegendItem = ColorLegendItem(
-            imageItem=self.imageItem, showHistogram=showHistogram, label=None)
-        self.colorLegendItem.setLabel('hello')
-        self.colorLegendItem.setLabel(None)
+            imageItem=self.imageItem,
+            showHistogram=showHistogram,
+            #histHeightPercentile=99.0, # Uncomment to discard the outliers in the histogram height
+            label='Random data')
         self.colorLegendItem.setMinimumHeight(60)
 
         self.graphicsLayoutWidget = pg.GraphicsLayoutWidget()
@@ -256,6 +257,9 @@ class DemoWindow(QtWidgets.QMainWindow):
         # img = np.random.randint(100, 150, size=(1216, 1936), dtype=np.uint16)
         img = pg.gaussianFilter(np.random.normal(size=(300, 200)), (5, 5)) * 20
         # img = np.random.normal(size=(300, 200)) * 100
+
+        # Add rectangle with outliers to demonstrate the histHeightPercentile parameter
+        img[15:45, 25:75] = 2.5
 
         # For testing issue 792
         # maxVal = 1.0

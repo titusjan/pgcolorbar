@@ -88,7 +88,7 @@ class ColorLegendItem(pg.GraphicsWidget):
                  showHistogram=True,
                  histFillColor=(100, 100, 200),
                  subsampleStep='auto',
-                 histHeightPercentile = 99.0,
+                 histHeightPercentile = 100.0,
                  maxTickLength=10):
         """ Constructor.
 
@@ -96,11 +96,12 @@ class ColorLegendItem(pg.GraphicsWidget):
             :param Optonal[str] label: text to show next to the axis
             :param bool showHistogram: if True (the default), a histogram of image values is drawn.
             :param histFillColor: color to fill the histogram. Default same as in PyQtGraph.
-            :param float histHeightPercentile: Only use this percentil when scaling the histogram
-                height. Often an image has one color that occurs very often and this then will
-                completely dominate the histogram. By discarding this color when scaling the
-                histogram the other color occurrences will become visible. By default we use the
-                99 percentile, meaning the 1% of the bins with the highest values will be discarded.
+            :param float histHeightPercentile: percentile of data points used for scaling the
+                histogram height. Often an image has one color that occurs very often and this
+                then will completely dominate the histogram. By discarding this color when scaling
+                the histogram the other color occurrences will become visible. E.g. by using
+                histHeightPercentile = 99.0, the 1% of the bins with the highest values will be
+                discarded. The default is 100.0, so no points are discarded by default.
             :param subsampleStep:The step size that is used to subsample the array when calculating
                 the histogram. Can be a scalar, a tuple with two elements, or 'auto'.
             :param int maxTickLength: Maximum tick length of the color axis. Default = 10
