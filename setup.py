@@ -7,6 +7,7 @@ from __future__ import absolute_import
 # or better
 #   rm -rf build dist
 #   python setup.py bdist_wheel
+#   twine check dist/*
 #   twine upload dist/pgcolorbar-x.y.z-py3-none-any.whl
 
 # see https://packaging.python.org/en/latest/distributing.html
@@ -65,6 +66,7 @@ setup(
     version = __version__,
     description = "PgColorbar is a color bar for PyQtGraph image plots.",
     long_description = readme + '\n\n' + history,
+    long_description_content_type = 'text/x-rst',
     author = "Pepijn Kenter",
     author_email = "titusjan@gmail.com",
     license = "BSD",
