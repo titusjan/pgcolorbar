@@ -3,6 +3,11 @@
 History
 -------
 
+1.1.1 (2021-04-27)
+------------------
+*   Fix setup.py install by adding HISTORY.rst to the source distribution
+
+
 1.1.0 (2021-02-07)
 ------------------
 *   Added 'Drag Lines' that can be used to change the color range at one side only.

@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-# To make a release follow these steps:
-#   python setup.py sdist
-# or better
-#   rm -rf build dist
+# To make a release follow these steps (nneded:
 #   python setup.py bdist_wheel
+# or a source distribution as needed for Anacona
+#   rm -rf build dist
+#   python setup.py sdist --formats=zip
 #   twine check dist/*
 #   twine upload dist/pgcolorbar-x.y.z-py3-none-any.whl
 
@@ -72,7 +72,7 @@ setup(
     license = "BSD",
     url="https://github.com/titusjan/pgcolorbar",
     packages = find_packages(exclude=('ingest',)),
-    package_data = {'': ['HISTORY.rst'], 'pgcolorbar': ['version.txt'] },
+    package_data = {'pgcolorbar': ['version.txt'] },
     entry_points={'gui_scripts': ['pgcolorbar_demo = pgcolorbar.demo:main']},
     install_requires = install_requires,
     zip_safe = False,
