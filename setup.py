@@ -55,11 +55,7 @@ import os.path
 
 # Don't import __version__ from pgcolorbar because this also tries to import PyQt, which
 # can fail if PyQt is not installed.
-MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
-VERSION_FILE = os.path.join(MODULE_DIR, 'pgcolorbar', 'version.txt')
-
-with open(VERSION_FILE) as stream:
-    __version__ = stream.readline().strip()
+__version__ = "1.1.2"
 
 setup(
     name = 'pgcolorbar',
