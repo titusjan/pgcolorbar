@@ -430,6 +430,9 @@ class ColorLegendItem(pg.GraphicsWidget):
             # the data are all-nan
             return None, None
 
+        if mn == mx:
+            return [mn, mx]
+
         if forIntegers:
             # For integer data, we select the bins carefully to avoid aliasing
             step = np.ceil((mx-mn) / float(numBins))
