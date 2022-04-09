@@ -9,6 +9,7 @@ import cProfile
 import logging
 import os
 import pstats
+import warnings
 
 import numpy as np
 import pyqtgraph as pg
@@ -62,6 +63,11 @@ def isExtended(lut):
     assertIsLut(lut)
     return np.array_equal(lut[-1, :], lut[-2, :])
 
+
+class NoFiniteDataError(Exception):
+    """ Raised when there is no finite data when calculating the histogram
+    """
+    pass
 
 
 class ColorLegendItem(pg.GraphicsWidget):
@@ -350,8 +356,12 @@ class ColorLegendItem(pg.GraphicsWidget):
 
             assert histogram[0] is not None, "Histogram empty in imageChanged()" # when does this happen again?
 
+        except NoFiniteDataError as ex:
+            logger.debug("No finite dataa. Unable to calculate histogram: {}".format(ex))
+            self.histPlotDataItem.setData([])  # seems necessary to clear data from screen
+            self.histPlotDataItem.clear()
         except Exception as ex:
-            logger.warning("Unable to calculate histogram: {}".format(ex))
+            logger.warning("Unable to calculate histogram: {}".format(ex)) # unknown reason
             self.histPlotDataItem.setData([])  # seems necessary to clear data from screen
             self.histPlotDataItem.clear()
         else:
@@ -396,8 +406,11 @@ class ColorLegendItem(pg.GraphicsWidget):
 
         stepData = imgArr[::step[0], ::step[1]]
 
-        mn = np.nanmin(stepData)
-        mx = np.nanmax(stepData)
+        with warnings.catch_warnings():
+            # Suppress warnings when stepData consists of only infinite data
+            warnings.simplefilter("ignore")
+            mn = np.nanmin(stepData)
+            mx = np.nanmax(stepData)
 
         return (mn, mx)
 
@@ -423,12 +436,12 @@ class ColorLegendItem(pg.GraphicsWidget):
             This function was based on PyQtGraph.ImageItem.getHistogram() commit efaf61f
 
             :returns: bins for use in numpy.histogram().
+                Returns None if the data are all Nans.
         """
         mn, mx = histRange
 
         if mn is None or np.isnan(mn) or mx is None or np.isnan(mx):
-            # the data are all-nan
-            return None, None
+            raise NoFiniteDataError  # The data are all-nan
 
         if mn == mx:
             return [mn, mx]
