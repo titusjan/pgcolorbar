@@ -145,7 +145,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         self.histViewBox.setFixedWidth(self.histogramWidth)
 
         self.histPlotDataItem = pg.PlotDataItem()
-        self.histPlotDataItem.rotate(90)
+        self.histPlotDataItem.setRotation(90)
 
         self.histViewBox.addItem(self.histPlotDataItem)
         self.fillHistogram()
@@ -506,7 +506,7 @@ class ColorLegendItem(pg.GraphicsWidget):
         """ Gets the value range of the legend
         """
         levels = self.axisItem.range # which equals self.histViewBox.state['viewRange'][Y_AXIS]
-        assert self.axisItem.range == self.overlayViewBox.state['viewRange'][Y_AXIS], \
+        assert np.allclose(self.axisItem.range, self.overlayViewBox.state['viewRange'][Y_AXIS]), \
             "Sanity check failed {} != {}".format(self.axisItem.range,
                                        self.overlayViewBox.state['viewRange'][Y_AXIS])
         return tuple(levels)
