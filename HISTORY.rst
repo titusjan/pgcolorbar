@@ -3,6 +3,10 @@
 History
 -------
 
+1.1.3 (2023-02-06)
+------------------
+* Removed deprecated numpy aliases so it works with numpy 1.24.
+
 
 1.1.2 (2022-11-13)
 ------------------
