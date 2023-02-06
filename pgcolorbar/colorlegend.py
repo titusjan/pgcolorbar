@@ -451,7 +451,7 @@ class ColorLegendItem(pg.GraphicsWidget):
             step = np.ceil((mx-mn) / float(numBins))
             logger.debug("mn {}, mx {}, step {}, mx+1.01*step = {}"
                          .format(mn, mx, step, mx+1.01*step))
-            bins = np.arange(mn, mx+1.01*step, step, dtype=np.int)
+            bins = np.arange(mn, mx+1.01*step, step, dtype=int)
         else:
             # for float data, let numpy select the bins.
             bins = np.linspace(mn, mx, numBins)
