@@ -1,7 +1,7 @@
 """ Miscellaneous routines
 """
 from __future__ import print_function, division
-
+from importlib.metadata import version
 import logging
 import os.path
 import sys
@@ -13,34 +13,7 @@ DEBUGGING = False
 LOG_FMT = '%(asctime)s %(filename)25s:%(lineno)-4d : %(levelname)-7s: %(message)s'
 
 logger = logging.getLogger(__name__)
-
-
-
-# Reads the version of the program from the first line of version.txt
-try:
-    if getattr(sys, 'frozen', False):
-        # If the application is run as a bundle, the pyInstaller bootloader
-        # extends the sys module by a flag frozen=True and sets the app
-        # path into variable _MEIPASS'.
-        MODULE_DIR = os.path.join(sys._MEIPASS, 'cmlib')
-        if DEBUGGING:
-            print("Module dir from meipass: {}".format(MODULE_DIR), file=sys.stderr)
-    else:
-        MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
-        if DEBUGGING:
-            print("Module dir from __file__: {}".format(MODULE_DIR), file=sys.stderr)
-
-    VERSION_FILE = os.path.join(MODULE_DIR, 'version.txt')
-    if DEBUGGING:
-        print("Reading version from: {}".format(VERSION_FILE), file=sys.stderr)
-    logger.debug("Reading version from: {}".format(VERSION_FILE))
-    with open(VERSION_FILE) as stream:
-        __version__ = stream.readline().strip()
-except Exception as ex:
-    __version__ = "?.?.?"
-    logger.error("Unable to read version number: {}".format(ex))
-    raise
-
+__version__ = version("cmlib")
 
 def versionStrToTuple(versionStr):
     """ Converts a version string to tuple
@@ -75,4 +48,3 @@ def check_class(var, cls, allowNone=False):
     """
     if not isinstance(var, cls) and not (allowNone and var is None):
         raise TypeError("Unexpected type {}, was expecting {}".format(type(var), cls))
-
